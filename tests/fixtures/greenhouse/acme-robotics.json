@@ -1,0 +1,29 @@
+{
+  "jobs": [
+    {
+      "id": 1001,
+      "title": "Software Engineer, New Grad",
+      "absolute_url": "https://boards.greenhouse.io/acmerobotics/jobs/1001",
+      "updated_at": "2026-09-23T08:00:00Z",
+      "first_published": "2 hours ago",
+      "location": {"name": "Seattle, WA"},
+      "content": "<p>Write production code and ship backend services. New graduates welcome. 0-2 years of experience. Visa sponsorship available.</p>"
+    },
+    {
+      "id": 1002,
+      "title": "Software Engineer",
+      "absolute_url": "https://boards.greenhouse.io/acmerobotics/jobs/1002",
+      "first_published": "4 hours ago",
+      "location": {"name": "Boston, MA"},
+      "content": "<p>Build and ship APIs in Python. Entry-level. We do not provide visa sponsorship.</p>"
+    },
+    {
+      "id": 2001,
+      "title": "Software Engineer, University Graduate",
+      "absolute_url": "https://boards.greenhouse.io/acmerobotics/jobs/2001",
+      "first_published": "5 hours ago",
+      "location": {"name": "Austin, TX, United States"},
+      "content": "<p>Design and implement distributed systems. Early career. Must not require sponsorship now or in the future.</p>"
+    }
+  ]
+}

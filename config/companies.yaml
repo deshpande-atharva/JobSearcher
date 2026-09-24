@@ -1,0 +1,880 @@
+# ---------------------------------------------------------------------------
+# Company universe.
+#
+# Production discovery uses the ENABLED companies below. Identifiers marked
+# `discovery: manual` were confirmed against a public ATS URL or public job-board
+# API. Nothing in this file is guessed from a company name.
+#
+# Unverified Fortune 500 names stay in the universe with enabled: false so they
+# can be turned on later without being deleted. Fixture companies live only
+# under tests/fixtures and tests/conftest.py.
+#
+# Priority at runtime:
+#   manual company config → verified ats_registry → automatic ATS discovery
+#   → company career-page fallback → optional Jobright
+# ---------------------------------------------------------------------------
+
+defaults:
+  enabled: true
+  fortune_500: false
+
+companies:
+  # =========================================================================
+  # PRODUCTION REGISTRY — verified public ATS identifiers
+  # =========================================================================
+
+  # --- Greenhouse (public boards-api.greenhouse.io/v1/boards/{id}/jobs) ---
+  - name: Airbnb
+    aliases: ["Airbnb Inc"]
+    fortune_500: false
+    careers_url: "https://careers.airbnb.com/"
+    discovery_urls:
+      - "https://boards.greenhouse.io/airbnb"
+    ats:
+      type: greenhouse
+      identifier: airbnb
+      discovery: manual
+
+  - name: Discord
+    aliases: ["Discord Inc"]
+    fortune_500: false
+    careers_url: "https://discord.com/careers"
+    discovery_urls:
+      - "https://boards.greenhouse.io/discord"
+    ats:
+      type: greenhouse
+      identifier: discord
+      discovery: manual
+
+  - name: Dropbox
+    aliases: ["Dropbox Inc"]
+    fortune_500: false
+    careers_url: "https://jobs.dropbox.com/"
+    discovery_urls:
+      - "https://boards.greenhouse.io/dropbox"
+    ats:
+      type: greenhouse
+      identifier: dropbox
+      discovery: manual
+
+  - name: Pinterest
+    aliases: ["Pinterest Inc"]
+    fortune_500: false
+    careers_url: "https://www.pinterestcareers.com/"
+    discovery_urls:
+      - "https://boards.greenhouse.io/pinterest"
+    ats:
+      type: greenhouse
+      identifier: pinterest
+      discovery: manual
+
+  - name: Figma
+    aliases: ["Figma Inc"]
+    fortune_500: false
+    careers_url: "https://www.figma.com/careers/"
+    discovery_urls:
+      - "https://boards.greenhouse.io/figma"
+    ats:
+      type: greenhouse
+      identifier: figma
+      discovery: manual
+
+  - name: Instacart
+    aliases: ["Maplebear", "Instacart Inc"]
+    fortune_500: false
+    careers_url: "https://instacart.careers/"
+    discovery_urls:
+      - "https://boards.greenhouse.io/instacart"
+    ats:
+      type: greenhouse
+      identifier: instacart
+      discovery: manual
+
+  - name: GitLab
+    aliases: ["GitLab Inc"]
+    fortune_500: false
+    careers_url: "https://about.gitlab.com/jobs/"
+    discovery_urls:
+      - "https://boards.greenhouse.io/gitlab"
+    ats:
+      type: greenhouse
+      identifier: gitlab
+      discovery: manual
+
+  - name: Twilio
+    aliases: ["Twilio Inc"]
+    fortune_500: false
+    careers_url: "https://www.twilio.com/company/jobs"
+    discovery_urls:
+      - "https://boards.greenhouse.io/twilio"
+    ats:
+      type: greenhouse
+      identifier: twilio
+      discovery: manual
+
+  - name: Vercel
+    aliases: ["Vercel Inc"]
+    fortune_500: false
+    careers_url: "https://vercel.com/careers"
+    discovery_urls:
+      - "https://boards.greenhouse.io/vercel"
+    ats:
+      type: greenhouse
+      identifier: vercel
+      discovery: manual
+
+  - name: Brex
+    aliases: ["Brex Inc"]
+    fortune_500: false
+    careers_url: "https://www.brex.com/careers"
+    discovery_urls:
+      - "https://boards.greenhouse.io/brex"
+    ats:
+      type: greenhouse
+      identifier: brex
+      discovery: manual
+
+  - name: Affirm
+    aliases: ["Affirm Inc", "Affirm Holdings"]
+    fortune_500: false
+    careers_url: "https://www.affirm.com/careers"
+    discovery_urls:
+      - "https://boards.greenhouse.io/affirm"
+    ats:
+      type: greenhouse
+      identifier: affirm
+      discovery: manual
+
+  - name: Lyft
+    aliases: ["Lyft Inc"]
+    fortune_500: false
+    careers_url: "https://www.lyft.com/careers"
+    discovery_urls:
+      - "https://boards.greenhouse.io/lyft"
+    ats:
+      type: greenhouse
+      identifier: lyft
+      discovery: manual
+
+  - name: Chime
+    aliases: ["Chime Financial"]
+    fortune_500: false
+    careers_url: "https://www.chime.com/careers/"
+    discovery_urls:
+      - "https://boards.greenhouse.io/chime"
+    ats:
+      type: greenhouse
+      identifier: chime
+      discovery: manual
+
+  - name: Scale AI
+    aliases: ["Scale", "Scale AI Inc"]
+    fortune_500: false
+    careers_url: "https://scale.com/careers"
+    discovery_urls:
+      - "https://boards.greenhouse.io/scaleai"
+    ats:
+      type: greenhouse
+      identifier: scaleai
+      discovery: manual
+
+  - name: Figure
+    aliases: ["Figure AI"]
+    fortune_500: false
+    careers_url: "https://www.figure.ai/careers"
+    discovery_urls:
+      - "https://job-boards.greenhouse.io/figureai"
+    ats:
+      type: greenhouse
+      identifier: figureai
+      discovery: manual
+
+  - name: Duolingo
+    aliases: ["Duolingo Inc"]
+    fortune_500: false
+    careers_url: "https://careers.duolingo.com/"
+    discovery_urls:
+      - "https://boards.greenhouse.io/duolingo"
+    ats:
+      type: greenhouse
+      identifier: duolingo
+      discovery: manual
+
+  - name: Coursera
+    aliases: ["Coursera Inc"]
+    fortune_500: false
+    careers_url: "https://about.coursera.org/careers"
+    discovery_urls:
+      - "https://boards.greenhouse.io/coursera"
+    ats:
+      type: greenhouse
+      identifier: coursera
+      discovery: manual
+
+  - name: Asana
+    aliases: ["Asana Inc"]
+    fortune_500: false
+    careers_url: "https://asana.com/jobs"
+    discovery_urls:
+      - "https://boards.greenhouse.io/asana"
+    ats:
+      type: greenhouse
+      identifier: asana
+      discovery: manual
+
+  - name: Box
+    aliases: ["Box Inc"]
+    fortune_500: false
+    careers_url: "https://www.box.com/careers"
+    discovery_urls:
+      - "https://boards.greenhouse.io/boxinc"
+    ats:
+      type: greenhouse
+      identifier: boxinc
+      discovery: manual
+
+  - name: Twitch
+    aliases: ["Twitch Interactive"]
+    fortune_500: false
+    careers_url: "https://www.twitch.tv/jobs"
+    discovery_urls:
+      - "https://boards.greenhouse.io/twitch"
+    ats:
+      type: greenhouse
+      identifier: twitch
+      discovery: manual
+
+  - name: Khan Academy
+    aliases: ["Khan Academy Inc"]
+    fortune_500: false
+    careers_url: "https://www.khanacademy.org/careers"
+    discovery_urls:
+      - "https://boards.greenhouse.io/khanacademy"
+    ats:
+      type: greenhouse
+      identifier: khanacademy
+      discovery: manual
+
+  - name: Nuro
+    aliases: ["Nuro Inc"]
+    fortune_500: false
+    careers_url: "https://www.nuro.ai/careers"
+    discovery_urls:
+      - "https://boards.greenhouse.io/nuro"
+    ats:
+      type: greenhouse
+      identifier: nuro
+      discovery: manual
+
+  - name: Together AI
+    aliases: ["Together Computer"]
+    fortune_500: false
+    careers_url: "https://www.together.ai/careers"
+    discovery_urls:
+      - "https://boards.greenhouse.io/togetherai"
+    ats:
+      type: greenhouse
+      identifier: togetherai
+      discovery: manual
+
+  - name: Flexport
+    aliases: ["Flexport Inc"]
+    fortune_500: false
+    careers_url: "https://www.flexport.com/careers"
+    discovery_urls:
+      - "https://boards.greenhouse.io/flexport"
+    ats:
+      type: greenhouse
+      identifier: flexport
+      discovery: manual
+
+  - name: Mercury
+    aliases: ["Mercury Technologies"]
+    fortune_500: false
+    careers_url: "https://mercury.com/jobs"
+    discovery_urls:
+      - "https://boards.greenhouse.io/mercury"
+    ats:
+      type: greenhouse
+      identifier: mercury
+      discovery: manual
+
+  - name: Robinhood
+    aliases: ["Robinhood Markets"]
+    fortune_500: false
+    careers_url: "https://careers.robinhood.com/"
+    discovery_urls:
+      - "https://boards.greenhouse.io/robinhood"
+    ats:
+      type: greenhouse
+      identifier: robinhood
+      discovery: manual
+
+  # --- Lever (public api.lever.co/v0/postings/{id}) ---
+  - name: Palantir
+    aliases: ["Palantir Technologies"]
+    fortune_500: false
+    careers_url: "https://www.palantir.com/careers/"
+    discovery_urls:
+      - "https://jobs.lever.co/palantir"
+    ats:
+      type: lever
+      identifier: palantir
+      discovery: manual
+
+  # --- Ashby (public api.ashbyhq.com/posting-api/job-board/{id}) ---
+  - name: Notion
+    aliases: ["Notion Labs"]
+    fortune_500: false
+    careers_url: "https://www.notion.com/careers"
+    discovery_urls:
+      - "https://jobs.ashbyhq.com/notion"
+    ats:
+      type: ashby
+      identifier: notion
+      discovery: manual
+
+  # --- Workday (public site URL → CXS /wday/cxs/{tenant}/{site}/jobs) ---
+  - name: Adobe
+    aliases: ["Adobe Inc", "Adobe Systems"]
+    fortune_500: true
+    careers_url: "https://careers.adobe.com/us/en/search-results"
+    discovery_urls:
+      - "https://adobe.wd5.myworkdayjobs.com/en-US/external_experienced"
+    ats:
+      type: workday
+      identifier: "https://adobe.wd5.myworkdayjobs.com/en-US/external_experienced"
+      discovery: manual
+
+  - name: Capital One
+    aliases: ["Capital One Financial", "Capital One Services"]
+    fortune_500: true
+    careers_url: "https://www.capitalonecareers.com/search-jobs"
+    discovery_urls:
+      - "https://capitalone.wd12.myworkdayjobs.com/en-US/Capital_One"
+    ats:
+      type: workday
+      identifier: "https://capitalone.wd12.myworkdayjobs.com/en-US/Capital_One"
+      discovery: manual
+
+  - name: Salesforce
+    aliases: ["Salesforce.com", "Salesforce Inc"]
+    fortune_500: true
+    careers_url: "https://careers.salesforce.com/en/jobs/"
+    discovery_urls:
+      - "https://salesforce.wd12.myworkdayjobs.com/en-US/external_career_site"
+    ats:
+      type: workday
+      identifier: "https://salesforce.wd12.myworkdayjobs.com/en-US/external_career_site"
+      discovery: manual
+
+  - name: NVIDIA
+    aliases: ["NVIDIA Corporation"]
+    fortune_500: true
+    careers_url: "https://www.nvidia.com/en-us/about-nvidia/careers/"
+    discovery_urls:
+      - "https://nvidia.wd5.myworkdayjobs.com/en-US/NVIDIAExternalCareerSite"
+    ats:
+      type: workday
+      identifier: "https://nvidia.wd5.myworkdayjobs.com/en-US/NVIDIAExternalCareerSite"
+      discovery: manual
+
+  - name: Workday
+    aliases: ["Workday Inc"]
+    fortune_500: false
+    careers_url: "https://www.workday.com/en-us/company/careers.html"
+    discovery_urls:
+      - "https://workday.wd5.myworkdayjobs.com/en-US/Workday"
+    ats:
+      type: workday
+      identifier: "https://workday.wd5.myworkdayjobs.com/en-US/Workday"
+      discovery: manual
+
+  # --- Auto-detect (public Workday URL on careers_url; no guessed handle) ---
+  # The published ELV_EXT path currently returns Workday "page not found"
+  # (CXS 404 Job_Posting_Site_ID=ELV_EXT). Do not invent a replacement site
+  # identifier. Career-page fallback runs; structured status is ERROR.
+  - name: Elevance Health
+    aliases: ["Anthem", "Anthem Inc"]
+    fortune_500: true
+    careers_url: "https://elevancehealth.wd1.myworkdayjobs.com/en-US/ELV_EXT"
+    ats:
+      type: auto
+      identifier: null
+      discovery: auto
+
+  # Stripe's public Greenhouse board token `stripe` did not return JSON when
+  # probed. Keep the official careers page and let auto-detect / career fallback
+  # run. Do not invent a replacement identifier.
+  - name: Stripe
+    aliases: ["Stripe Inc"]
+    fortune_500: false
+    careers_url: "https://stripe.com/jobs"
+    ats:
+      type: auto
+      identifier: null
+      discovery: auto
+
+  # =========================================================================
+  # FORTUNE 500 UNIVERSE — retained, disabled until a public ATS is verified
+  # =========================================================================
+  - name: Walmart
+    enabled: false
+    aliases: ["Walmart Inc", "Walmart Global Tech", "Wal-Mart Associates"]
+    fortune_500: true
+    careers_url: "https://careers.walmart.com/"
+    ats_type: null
+    ats_identifier: null
+
+  - name: Amazon
+    enabled: false
+    aliases: ["Amazon.com Services LLC", "Amazon Web Services", "AWS", "Amazon Development Center"]
+    fortune_500: true
+    careers_url: "https://www.amazon.jobs/"
+    ats_type: null
+    ats_identifier: null
+    discovery_urls:
+      - "https://www.amazon.jobs/en/job_categories/software-development"
+
+  - name: Costco Wholesale
+    enabled: false
+    aliases: ["Costco"]
+    fortune_500: true
+    careers_url: "https://www.costco.com/careers.html"
+    ats_type: null
+    ats_identifier: null
+
+  - name: Target
+    enabled: false
+    aliases: ["Target Corporation", "Target Enterprise"]
+    fortune_500: true
+    careers_url: "https://corporate.target.com/careers"
+    ats_type: null
+    ats_identifier: null
+
+  - name: The Home Depot
+    enabled: false
+    aliases: ["Home Depot"]
+    fortune_500: true
+    careers_url: "https://careers.homedepot.com/"
+    ats_type: null
+    ats_identifier: null
+
+  - name: Lowe's
+    enabled: false
+    aliases: ["Lowes Companies", "Lowe's Companies Inc"]
+    fortune_500: true
+    careers_url: "https://talent.lowes.com/us/en"
+    ats_type: null
+    ats_identifier: null
+
+  - name: Apple
+    enabled: false
+    aliases: ["Apple Inc"]
+    fortune_500: true
+    careers_url: "https://jobs.apple.com/en-us/search"
+    ats_type: null
+    ats_identifier: null
+
+  - name: Microsoft
+    enabled: false
+    aliases: ["Microsoft Corporation"]
+    fortune_500: true
+    careers_url: "https://jobs.careers.microsoft.com/global/en/search"
+    ats_type: null
+    ats_identifier: null
+
+  - name: Alphabet
+    enabled: false
+    aliases: ["Google", "Google LLC", "Google Inc"]
+    fortune_500: true
+    careers_url: "https://www.google.com/about/careers/applications/jobs/results/"
+    ats_type: null
+    ats_identifier: null
+
+  - name: Meta
+    enabled: false
+    aliases: ["Meta Platforms", "Facebook", "Facebook Inc"]
+    fortune_500: true
+    careers_url: "https://www.metacareers.com/jobs"
+    ats_type: null
+    ats_identifier: null
+
+  - name: Intel
+    enabled: false
+    aliases: ["Intel Corporation"]
+    fortune_500: true
+    careers_url: "https://jobs.intel.com/en"
+    ats_type: null
+    ats_identifier: null
+
+  - name: IBM
+    enabled: false
+    aliases: ["International Business Machines", "IBM Corporation"]
+    fortune_500: true
+    careers_url: "https://www.ibm.com/careers/search"
+    ats_type: null
+    ats_identifier: null
+
+  - name: Oracle
+    enabled: false
+    aliases: ["Oracle America", "Oracle Corporation"]
+    fortune_500: true
+    careers_url: "https://careers.oracle.com/jobs"
+    ats_type: null
+    ats_identifier: null
+
+  - name: Cisco Systems
+    enabled: false
+    aliases: ["Cisco"]
+    fortune_500: true
+    careers_url: "https://jobs.cisco.com/jobs/SearchJobs"
+    ats_type: null
+    ats_identifier: null
+
+  - name: Qualcomm
+    enabled: false
+    aliases: ["Qualcomm Technologies", "Qualcomm Incorporated"]
+    fortune_500: true
+    careers_url: "https://careers.qualcomm.com/careers"
+    ats_type: null
+    ats_identifier: null
+
+  - name: Advanced Micro Devices
+    enabled: false
+    aliases: ["AMD"]
+    fortune_500: true
+    careers_url: "https://careers.amd.com/careers-home"
+    ats_type: null
+    ats_identifier: null
+
+  - name: Dell Technologies
+    enabled: false
+    aliases: ["Dell", "Dell Products"]
+    fortune_500: true
+    careers_url: "https://jobs.dell.com/"
+    ats_type: null
+    ats_identifier: null
+
+  - name: Hewlett Packard Enterprise
+    enabled: false
+    aliases: ["HPE"]
+    fortune_500: true
+    careers_url: "https://careers.hpe.com/us/en"
+    ats_type: null
+    ats_identifier: null
+
+  - name: Texas Instruments
+    enabled: false
+    aliases: ["TI"]
+    fortune_500: true
+    careers_url: "https://careers.ti.com/"
+    ats_type: null
+    ats_identifier: null
+
+  - name: Uber
+    enabled: false
+    aliases: ["Uber Technologies"]
+    fortune_500: true
+    careers_url: "https://www.uber.com/us/en/careers/list/"
+    ats_type: null
+    ats_identifier: null
+
+  - name: PayPal
+    enabled: false
+    aliases: ["PayPal Holdings"]
+    fortune_500: true
+    careers_url: "https://careers.pypl.com/home/"
+    ats_type: null
+    ats_identifier: null
+
+  - name: Block
+    enabled: false
+    aliases: ["Square", "Block Inc"]
+    fortune_500: true
+    careers_url: "https://block.xyz/careers/jobs"
+    ats_type: null
+    ats_identifier: null
+
+  - name: JPMorgan Chase
+    enabled: false
+    aliases: ["JPMorgan Chase & Co", "JP Morgan", "Chase"]
+    fortune_500: true
+    careers_url: "https://careers.jpmorgan.com/us/en/search-results"
+    ats_type: null
+    ats_identifier: null
+
+  - name: Bank of America
+    enabled: false
+    aliases: ["BofA", "Bank of America Corporation"]
+    fortune_500: true
+    careers_url: "https://careers.bankofamerica.com/en-us/job-search"
+    ats_type: null
+    ats_identifier: null
+
+  - name: Wells Fargo
+    enabled: false
+    aliases: ["Wells Fargo & Company", "Wells Fargo Bank"]
+    fortune_500: true
+    careers_url: "https://www.wellsfargojobs.com/en/jobs/"
+    ats_type: null
+    ats_identifier: null
+
+  - name: Citigroup
+    enabled: false
+    aliases: ["Citi", "Citibank"]
+    fortune_500: true
+    careers_url: "https://jobs.citi.com/search-jobs"
+    ats_type: null
+    ats_identifier: null
+
+  - name: Goldman Sachs
+    enabled: false
+    aliases: ["Goldman Sachs Group", "Goldman Sachs & Co"]
+    fortune_500: true
+    careers_url: "https://higher.gs.com/results"
+    ats_type: null
+    ats_identifier: null
+
+  - name: Morgan Stanley
+    enabled: false
+    aliases: ["Morgan Stanley & Co"]
+    fortune_500: true
+    careers_url: "https://www.morganstanley.com/careers/career-opportunities-search"
+    ats_type: null
+    ats_identifier: null
+
+  - name: American Express
+    enabled: false
+    aliases: ["Amex", "American Express Travel Related Services"]
+    fortune_500: true
+    careers_url: "https://www.americanexpress.com/en-us/careers/"
+    ats_type: null
+    ats_identifier: null
+
+  - name: Visa
+    enabled: false
+    aliases: ["Visa Inc", "Visa U.S.A. Inc", "Visa Technology & Operations"]
+    fortune_500: true
+    careers_url: "https://corporate.visa.com/en/jobs/"
+    ats_type: null
+    ats_identifier: null
+
+  - name: Mastercard
+    enabled: false
+    aliases: ["Mastercard Incorporated", "Mastercard International"]
+    fortune_500: true
+    careers_url: "https://careers.mastercard.com/us/en/search-results"
+    ats_type: null
+    ats_identifier: null
+
+  - name: Fidelity Investments
+    enabled: false
+    aliases: ["FMR LLC", "Fidelity"]
+    fortune_500: true
+    careers_url: "https://www.fidelity.com/about-fidelity/careers"
+    ats_type: null
+    ats_identifier: null
+
+  - name: UnitedHealth Group
+    enabled: false
+    aliases: ["UnitedHealthcare", "Optum", "UnitedHealth Group Incorporated"]
+    fortune_500: true
+    careers_url: "https://careers.unitedhealthgroup.com/"
+    ats_type: null
+    ats_identifier: null
+
+  - name: Progressive
+    enabled: false
+    aliases: ["Progressive Casualty Insurance", "Progressive Corporation"]
+    fortune_500: true
+    careers_url: "https://www.progressive.com/careers/"
+    ats_type: null
+    ats_identifier: null
+
+  - name: Liberty Mutual
+    enabled: false
+    aliases: ["Liberty Mutual Insurance", "Liberty Mutual Group"]
+    fortune_500: true
+    careers_url: "https://jobs.libertymutualgroup.com/"
+    ats_type: null
+    ats_identifier: null
+
+  - name: CVS Health
+    enabled: false
+    aliases: ["CVS Pharmacy", "Aetna", "CVS Health Corporation"]
+    fortune_500: true
+    careers_url: "https://jobs.cvshealth.com/"
+    ats_type: null
+    ats_identifier: null
+
+  - name: Johnson & Johnson
+    enabled: false
+    aliases: ["Johnson and Johnson", "J&J"]
+    fortune_500: true
+    careers_url: "https://www.careers.jnj.com/en/jobs/"
+    ats_type: null
+    ats_identifier: null
+
+  - name: Pfizer
+    enabled: false
+    aliases: ["Pfizer Inc"]
+    fortune_500: true
+    careers_url: "https://www.pfizer.com/about/careers"
+    ats_type: null
+    ats_identifier: null
+
+  - name: Boeing
+    enabled: false
+    aliases: ["The Boeing Company"]
+    fortune_500: true
+    careers_url: "https://jobs.boeing.com/"
+    ats_type: null
+    ats_identifier: null
+
+  - name: Lockheed Martin
+    enabled: false
+    aliases: ["Lockheed Martin Corporation"]
+    fortune_500: true
+    careers_url: "https://www.lockheedmartinjobs.com/search-jobs"
+    ats_type: null
+    ats_identifier: null
+
+  - name: RTX
+    enabled: false
+    aliases: ["Raytheon", "Raytheon Technologies", "Collins Aerospace", "Pratt & Whitney"]
+    fortune_500: true
+    careers_url: "https://careers.rtx.com/global/en/search-results"
+    ats_type: null
+    ats_identifier: null
+
+  - name: General Motors
+    enabled: false
+    aliases: ["GM", "General Motors Company"]
+    fortune_500: true
+    careers_url: "https://search-careers.gm.com/en/jobs/"
+    ats_type: null
+    ats_identifier: null
+
+  - name: Ford Motor
+    enabled: false
+    aliases: ["Ford", "Ford Motor Company"]
+    fortune_500: true
+    careers_url: "https://corporate.ford.com/careers.html"
+    ats_type: null
+    ats_identifier: null
+
+  - name: Tesla
+    enabled: false
+    aliases: ["Tesla Inc", "Tesla Motors"]
+    fortune_500: true
+    careers_url: "https://www.tesla.com/careers/search/"
+    ats_type: null
+    ats_identifier: null
+
+  - name: Deere & Company
+    enabled: false
+    aliases: ["John Deere", "Deere"]
+    fortune_500: true
+    careers_url: "https://careers.deere.com/careers"
+    ats_type: null
+    ats_identifier: null
+
+  - name: Honeywell
+    enabled: false
+    aliases: ["Honeywell International"]
+    fortune_500: true
+    careers_url: "https://careers.honeywell.com/us/en/search-results"
+    ats_type: null
+    ats_identifier: null
+
+  - name: AT&T
+    enabled: false
+    aliases: ["AT&T Services", "ATT"]
+    fortune_500: true
+    careers_url: "https://www.att.jobs/search-jobs"
+    ats_type: null
+    ats_identifier: null
+
+  - name: Verizon
+    enabled: false
+    aliases: ["Verizon Communications", "Verizon Business"]
+    fortune_500: true
+    careers_url: "https://www.verizon.com/about/careers/job-search"
+    ats_type: null
+    ats_identifier: null
+
+  - name: Comcast
+    enabled: false
+    aliases: ["Comcast Cable Communications", "NBCUniversal"]
+    fortune_500: true
+    careers_url: "https://jobs.comcast.com/jobs"
+    ats_type: null
+    ats_identifier: null
+
+  - name: The Walt Disney Company
+    enabled: false
+    aliases: ["Disney", "Walt Disney"]
+    fortune_500: true
+    careers_url: "https://jobs.disneycareers.com/search-jobs"
+    ats_type: null
+    ats_identifier: null
+
+  - name: Netflix
+    enabled: false
+    aliases: ["Netflix Inc"]
+    fortune_500: true
+    careers_url: "https://explore.jobs.netflix.net/careers"
+    ats_type: null
+    ats_identifier: null
+
+  - name: United Parcel Service
+    enabled: false
+    aliases: ["UPS"]
+    fortune_500: true
+    careers_url: "https://www.jobs-ups.com/search-jobs"
+    ats_type: null
+    ats_identifier: null
+
+  - name: FedEx
+    enabled: false
+    aliases: ["FedEx Corporation", "Federal Express"]
+    fortune_500: true
+    careers_url: "https://careers.fedex.com/"
+    ats_type: null
+    ats_identifier: null
+
+  - name: Accenture
+    enabled: false
+    aliases: ["Accenture LLP", "Accenture Federal Services"]
+    fortune_500: true
+    careers_url: "https://www.accenture.com/us-en/careers/jobsearch"
+    ats_type: null
+    ats_identifier: null
+
+  - name: Deloitte
+    enabled: false
+    aliases: ["Deloitte Consulting", "Deloitte & Touche", "Deloitte LLP"]
+    fortune_500: false
+    careers_url: "https://apply.deloitte.com/careers"
+    ats_type: null
+    ats_identifier: null
+
+  - name: Leidos
+    enabled: false
+    aliases: ["Leidos Holdings", "Leidos Inc"]
+    fortune_500: true
+    careers_url: "https://careers.leidos.com/search/jobs"
+    ats_type: null
+    ats_identifier: null
+
+  - name: Booz Allen Hamilton
+    enabled: false
+    aliases: ["Booz Allen"]
+    fortune_500: true
+    careers_url: "https://careers.boozallen.com/careers"
+    ats_type: null
+    ats_identifier: null
+
+  # Fixture-only companies live under tests/fixtures and tests/conftest.py.
+  # They are not part of the production universe.

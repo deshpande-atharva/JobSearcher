@@ -1,0 +1,30 @@
+{
+  "found": true,
+  "records": [
+    {
+      "employer": "Acme Robotics Inc",
+      "job_title": "Software Development Engineer",
+      "city": "Seattle",
+      "state": "WA",
+      "fiscal_year": 2025,
+      "approvals": 42,
+      "denials": 2
+    },
+    {
+      "employer": "Acme Robotics Inc",
+      "job_title": "Marketing Analyst",
+      "city": "Chicago",
+      "state": "IL",
+      "fiscal_year": 2024,
+      "approvals": 1
+    },
+    {
+      "employer": "Acme Robotics Inc",
+      "job_title": "Software Engineer",
+      "city": "New York",
+      "state": "NY",
+      "fiscal_year": 2014,
+      "approvals": 8
+    }
+  ]
+}

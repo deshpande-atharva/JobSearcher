@@ -1,0 +1,91 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "job-agent"
+version = "1.0.0"
+description = "AI-powered daily job discovery and application tracker for U.S. software engineering roles."
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+authors = [{ name = "job-agent maintainers" }]
+keywords = ["jobs", "langgraph", "gemini", "multi-agent", "h1b", "ats"]
+classifiers = [
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Intended Audience :: Developers",
+    "Topic :: Office/Business",
+]
+
+dependencies = [
+    "pydantic>=2.9,<3",
+    "pyyaml>=6.0.1",
+    "httpx>=0.27,<1",
+    "beautifulsoup4>=4.12",
+    "openpyxl>=3.1.2",
+    "python-dotenv>=1.0",
+    "tenacity>=8.3",
+    "langgraph>=0.2.60",
+    "google-genai>=1.0,<3",
+    "playwright>=1.44",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.2",
+    "pytest-asyncio>=0.23",
+    "pytest-cov>=5.0",
+    "ruff>=0.5",
+    "mypy>=1.10",
+    "types-PyYAML>=6.0",
+]
+
+[project.scripts]
+job-agent = "src.main:cli"
+
+[project.urls]
+Homepage = "https://github.com/your-username/job-agent"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
+
+[tool.setuptools.package-data]
+"src" = ["py.typed"]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+addopts = "-q --strict-markers"
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+filterwarnings = ["ignore::DeprecationWarning"]
+markers = [
+    "slow: marks tests as slow",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "C4", "SIM", "RUF"]
+ignore = ["B008", "RUF012"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["E501"]
+
+[tool.mypy]
+python_version = "3.12"
+plugins = ["pydantic.mypy"]
+warn_unused_ignores = true
+warn_redundant_casts = true
+ignore_missing_imports = true
+disallow_untyped_defs = false
+files = ["src"]
+
+[tool.coverage.run]
+source = ["src"]
+omit = ["src/sources/playwright_renderer.py"]

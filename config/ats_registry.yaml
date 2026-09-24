@@ -1,0 +1,15 @@
+companies:
+  elevance health:
+    ats_type: workday
+    ats_identifier: https://elevancehealth.wd1.myworkdayjobs.com/en-US/ELV_EXT
+    discovered_at: '2026-09-24T16:09:09.634308Z'
+    discovery_method: automatic
+    careers_url: https://elevancehealth.wd1.myworkdayjobs.com/en-US/ELV_EXT
+    confidence: 1.0
+  stripe:
+    ats_type: null
+    ats_identifier: null
+    discovered_at: '2026-09-24T16:25:47.270942Z'
+    discovery_method: failed
+    careers_url: https://stripe.com/jobs
+    confidence: null

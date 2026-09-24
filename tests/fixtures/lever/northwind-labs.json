@@ -1,0 +1,18 @@
+[
+  {
+    "id": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+    "text": "Platform Engineer, Early Career",
+    "hostedUrl": "https://jobs.lever.co/northwindlabs/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+    "applyUrl": "https://jobs.lever.co/northwindlabs/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee/apply",
+    "categories": {"location": "Denver, CO", "commitment": "Full-time"},
+    "workplaceType": "hybrid",
+    "createdAt": "3 hours ago",
+    "descriptionPlain": "Build developer platform tooling. New graduates welcome. 0-2 years.",
+    "lists": [
+      {
+        "text": "Minimum Qualifications",
+        "content": "Bachelor's degree. 0-2 years of software experience."
+      }
+    ]
+  }
+]

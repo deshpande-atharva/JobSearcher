@@ -1,0 +1,60 @@
+{
+  "jobs": [
+    {
+      "title": "Software Engineer, New Grad",
+      "company": "Acme Robotics",
+      "location": "Seattle, WA",
+      "jobId": "jr-1001",
+      "applyUrl": "https://boards.greenhouse.io/acmerobotics/jobs/1001",
+      "postedAt": "2 hours ago",
+      "employmentType": "Full-time",
+      "description": "We are hiring a Software Engineer. Write production code, review pull requests, and ship backend services. New graduates welcome. 0-2 years of experience. Visa sponsorship available."
+    },
+    {
+      "title": "Software Engineer",
+      "company": "Acme Robotics",
+      "location": "Boston, MA",
+      "jobId": "jr-1002",
+      "applyUrl": "https://boards.greenhouse.io/acmerobotics/jobs/1002",
+      "postedAt": "4 hours ago",
+      "employmentType": "Full-time",
+      "description": "Build and ship APIs in Python. Entry-level candidates encouraged. We do not provide visa sponsorship."
+    },
+    {
+      "title": "Data Analyst",
+      "company": "Acme Robotics",
+      "location": "Austin, TX",
+      "jobId": "jr-1003",
+      "applyUrl": "https://boards.greenhouse.io/acmerobotics/jobs/1003",
+      "postedAt": "1 hour ago",
+      "description": "Build dashboards and reports in Tableau. No software engineering responsibilities."
+    },
+    {
+      "title": "Senior Staff Software Engineer",
+      "company": "Northwind Labs",
+      "location": "New York, NY",
+      "jobId": "jr-1004",
+      "applyUrl": "https://jobs.lever.co/northwindlabs/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+      "postedAt": "3 hours ago",
+      "description": "Minimum 8 years of experience. Lead the platform organization."
+    },
+    {
+      "title": "Software Developer",
+      "company": "Globex",
+      "location": "London, United Kingdom",
+      "jobId": "jr-1005",
+      "applyUrl": "https://jobs.ashbyhq.com/globex/11111111-2222-3333-4444-555555555555",
+      "postedAt": "2 hours ago",
+      "description": "Full-time software developer. 0-1 years."
+    },
+    {
+      "title": "Backend Engineer",
+      "company": "Initech",
+      "location": "Remote - United States",
+      "jobId": "jr-1006",
+      "applyUrl": "https://www.linkedin.com/jobs/view/999999",
+      "postedAt": "1 hour ago",
+      "description": "Entry-level backend engineer. New graduates welcome."
+    }
+  ]
+}

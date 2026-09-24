@@ -1,0 +1,246 @@
+# ---------------------------------------------------------------------------
+# job-agent runtime settings
+#
+# Everything here is data, not code. Change behaviour without touching Python.
+# Values are validated by src/models/config.py (Pydantic), so typos fail fast
+# with a readable error instead of silently doing the wrong thing.
+# ---------------------------------------------------------------------------
+
+run:
+  # Production freshness window. Real elapsed UTC hours, not a calendar date.
+  # GitHub Actions uses this value. --freshness-hours is diagnostic only.
+  freshness_hours: 24
+  # If posted_at is missing, age may be taken from updated_at. Posted and
+  # updated dates are never merged into one fabricated posted_at.
+  freshness_use_updated_when_posted_missing: true
+  # Upper bound on concurrent outbound HTTP requests across all sources.
+  max_concurrency: 8
+  request_timeout_seconds: 30
+  retry_attempts: 3
+  retry_backoff_seconds: 1.5
+  # Politeness identifier sent with every request.
+  user_agent: "job-agent/1.0 (+https://github.com/your-username/job-agent)"
+  # Safety cap after cross-source dedup. 0 = process every job.
+  # 15000 covers the 35-company universe once Workday CXS paginates
+  # (~3100 Greenhouse + ~6300 Workday + Lever/Ashby/career). Truncation,
+  # if it ever happens, is round-robin by company and reported.
+  max_jobs_per_run: 15000
+
+discovery:
+  sources:
+    jobright:
+      enabled: true
+      # Optional aggregator. ATS boards are preferred when available.
+      entry_url: "https://jobright.ai/entry-level-jobs"
+      max_pages: 3
+      # Jobright is JS-heavy; allow a rendered fallback when static HTML has
+      # no machine-readable job data.
+      allow_browser_render: true
+    greenhouse:
+      enabled: true
+    lever:
+      enabled: true
+    ashby:
+      enabled: true
+    smartrecruiters:
+      enabled: true
+    workday:
+      enabled: true
+      # Public CXS tenants reject limit>20 with HTTP 400. Do not raise this.
+      page_size: 20
+      max_jobs: 2000
+      # Workday-only bound. Greenhouse/Lever/Ashby keep run.max_concurrency.
+      max_concurrency: 2
+    icims:
+      enabled: true
+    company_career:
+      enabled: true
+  # Cache of successfully discovered ATS identifiers (no secrets, no job data).
+  ats_registry: "config/ats_registry.yaml"
+  auto_detect_ats: true
+  persist_ats_registry: true
+  career_detail_fetch_limit: 12
+  skip_career_page_when_ats_has_jobs: true
+
+filters:
+  # Employment types kept in the output. See EmploymentType enum.
+  employment_types: ["Full-time", "Contract", "Internship", "Co-op"]
+  # Maximum *required* years of experience the target profile accepts.
+  max_required_years: 2
+  # Preferred/"nice to have" experience above this bound does not reject a job.
+  ignore_preferred_experience: true
+  require_us_location: true
+  # Seniority words that reject a posting outright when they qualify the role.
+  reject_seniority_terms:
+    - senior
+    - sr.
+    - staff
+    - principal
+    - lead
+    - manager
+    - director
+    - head of
+    - architect
+    - vp
+    - vice president
+    - distinguished
+    - fellow
+    - ii
+    - iii
+    - iv
+
+urls:
+  # Aggregators and search engines. Useful for *discovery*, never acceptable as
+  # the final application URL.
+  aggregator_hosts:
+    - linkedin.com
+    - indeed.com
+    - glassdoor.com
+    - jobright.ai
+    - ziprecruiter.com
+    - dice.com
+    - monster.com
+    - simplyhired.com
+    - careerbuilder.com
+    - google.com
+    - bing.com
+    - duckduckgo.com
+    - jobs.google.com
+    - lensa.com
+    - talent.com
+    - jooble.org
+    - builtin.com
+    - wellfound.com
+    - angel.co
+    - handshake.com
+    - joinhandshake.com
+  # Host suffixes recognised as a legitimate applicant tracking system.
+  ats_hosts:
+    greenhouse:
+      - boards.greenhouse.io
+      - job-boards.greenhouse.io
+      - boards.eu.greenhouse.io
+      - job-boards.eu.greenhouse.io
+    lever:
+      - jobs.lever.co
+      - jobs.eu.lever.co
+    workday:
+      - myworkdayjobs.com
+      - myworkdaysite.com
+      - wd1.myworkdayjobs.com
+      - wd5.myworkdayjobs.com
+    ashby:
+      - jobs.ashbyhq.com
+    smartrecruiters:
+      - jobs.smartrecruiters.com
+      - careers.smartrecruiters.com
+    icims:
+      - icims.com
+    other_ats:
+      - workable.com
+      - jobvite.com
+      - breezy.hr
+      - recruitee.com
+      - teamtailor.com
+      - bamboohr.com
+      - successfactors.com
+      - taleo.net
+      - oraclecloud.com
+      - eightfold.ai
+      - phenompeople.com
+      - avature.net
+      - paylocity.com
+      - rippling-ats.com
+      - applytojob.com
+  # Query parameters stripped during URL canonicalisation.
+  strip_query_params:
+    - utm_source
+    - utm_medium
+    - utm_campaign
+    - utm_term
+    - utm_content
+    - gh_src
+    - gh_jid_src
+    - ref
+    - referrer
+    - source
+    - src
+    - trk
+    - trackingId
+    - lever-source
+    - _gl
+    - fbclid
+    - gclid
+  # Verify the final URL resolves (HEAD, falling back to GET).
+  verify_reachability: true
+  # Treat an unreachable-but-well-formed ATS URL as acceptable rather than
+  # discarding a real job because of a transient network error.
+  allow_unverified_ats_urls: true
+
+# ---------------------------------------------------------------------------
+# H-1B sponsorship EVIDENCE configuration.
+#
+# READ THIS BEFORE EDITING: these settings control how sponsorship evidence is
+# *gathered and interpreted*. They must never remove a job. There is
+# deliberately no `require_h1b_sponsorship` option -- see
+# src/services/h1b.py and tests/test_h1b_sponsorship.py, which assert that
+# otherwise-qualified jobs survive every sponsorship outcome.
+# ---------------------------------------------------------------------------
+visa:
+  enabled: true
+  provider: h1bgrader
+  base_url: "https://h1bgrader.com/h1b-sponsors"
+  historical_lookback_years: 5
+  use_job_title_matching: true
+  use_location_matching: true
+  use_current_posting_language: true
+  use_gemini_for_ambiguous_language: true
+  # Cache lookups for the duration of a run (and across runs, on disk).
+  cache_ttl_hours: 168
+  cache_path: "data/cache/h1b_lookups.json"
+  # Skip the network lookup entirely when the current posting already gives an
+  # explicit, unambiguous job-level answer. Saves requests, changes nothing.
+  skip_lookup_when_job_explicit: true
+  # Minimum confidence a posting-language signal needs to be treated as
+  # explicit rather than ambiguous.
+  explicit_language_confidence: 0.7
+
+llm:
+  provider: gemini
+  model: "gemini-2.5-flash"
+  temperature: 0.0
+  max_output_tokens: 2048
+  timeout_seconds: 60
+  # Budget per run. Once exhausted the pipeline falls back to deterministic
+  # logic and marks ambiguity as UNKNOWN rather than guessing.
+  max_calls_per_run: 300
+  # Stop calling the provider after this many consecutive failures.
+  circuit_breaker_failures: 5
+  retry_attempts: 2
+
+output:
+  current_workbook: "data/current/jobs.xlsx"
+  archive_dir: "data/archive"
+  # How far back to read archived workbooks when building the "already seen"
+  # set used for historical deduplication.
+  history_lookback_days: 120
+  write_archive: true
+
+notifications:
+  enabled: true
+  subject_prefix: "[job-agent]"
+  # The email is a run summary, not a job dump.
+  max_sample_jobs: 15
+
+scraping:
+  respect_robots_txt: true
+  min_delay_seconds: 1.0
+  max_html_bytes: 4000000
+  playwright:
+    enabled: true
+    headless: true
+    timeout_seconds: 45
+
+fixtures:
+  # Used by --fixture-mode. Offline copies of source payloads.
+  directory: "tests/fixtures"

@@ -1,0 +1,373 @@
+# ---------------------------------------------------------------------------
+# Role targeting configuration.
+#
+# This file describes the *shape* of the roles we want, not an exhaustive list
+# of titles. Deterministic matching here handles the clear cases cheaply; the
+# Role Classification Agent escalates genuinely ambiguous postings to the LLM,
+# which judges the actual work described rather than the title string.
+# ---------------------------------------------------------------------------
+
+# Normalized role families. `normalized_role` on each job is one of these keys.
+# `keywords` are matched against the normalized job title.
+role_families:
+  SOFTWARE_ENGINEER:
+    label: "Software Engineer"
+    keywords:
+      - software engineer
+      - software developer
+      - software development engineer
+      - sde
+      - sdet
+      - application developer
+      - applications engineer
+      - programmer analyst
+      - member of technical staff
+      - software engineering
+      - computer scientist
+  BACKEND_ENGINEER:
+    label: "Backend Engineer"
+    keywords:
+      - backend engineer
+      - back end engineer
+      - back-end engineer
+      - backend developer
+      - server engineer
+      - api engineer
+      - services engineer
+      - distributed systems engineer
+  FRONTEND_ENGINEER:
+    label: "Frontend Engineer"
+    keywords:
+      - frontend engineer
+      - front end engineer
+      - front-end engineer
+      - frontend developer
+      - ui engineer
+      - web developer
+      - web engineer
+      - javascript engineer
+      - react engineer
+  FULLSTACK_ENGINEER:
+    label: "Full Stack Engineer"
+    keywords:
+      - full stack
+      - fullstack
+      - full-stack
+  PLATFORM_ENGINEER:
+    label: "Platform Engineer"
+    keywords:
+      - platform engineer
+      - developer platform
+      - developer experience engineer
+      - build engineer
+      - tooling engineer
+      - release engineer
+  CLOUD_ENGINEER:
+    label: "Cloud Engineer"
+    keywords:
+      - cloud engineer
+      - cloud developer
+      - cloud software engineer
+      - aws engineer
+      - azure engineer
+      - gcp engineer
+  INFRASTRUCTURE_ENGINEER:
+    label: "Infrastructure Engineer"
+    keywords:
+      - infrastructure engineer
+      - infra engineer
+      - network software engineer
+      - storage engineer
+      - compute engineer
+  DEVOPS_ENGINEER:
+    label: "DevOps Engineer"
+    keywords:
+      - devops
+      - dev ops
+      - devsecops
+      - automation engineer
+      - ci/cd engineer
+  SITE_RELIABILITY_ENGINEER:
+    label: "Site Reliability Engineer"
+    keywords:
+      - site reliability
+      - reliability engineer
+      - sre
+      - production engineer
+  SYSTEMS_ENGINEER:
+    label: "Systems Engineer"
+    keywords:
+      - systems engineer
+      - system engineer
+      - systems software engineer
+      - embedded software engineer
+      - firmware engineer
+      - kernel engineer
+      - operating systems engineer
+      - compiler engineer
+  PRODUCT_ENGINEER:
+    label: "Product Engineer"
+    keywords:
+      - product engineer
+      - growth engineer
+      - solutions engineer
+      - forward deployed engineer
+      - implementation engineer
+  MOBILE_ENGINEER:
+    label: "Mobile Engineer"
+    keywords:
+      - mobile engineer
+      - mobile developer
+      - ios engineer
+      - ios developer
+      - android engineer
+      - android developer
+  SECURITY_ENGINEER:
+    label: "Security Engineer"
+    keywords:
+      - security engineer
+      - security software engineer
+      - application security engineer
+      - product security engineer
+  QA_AUTOMATION_ENGINEER:
+    label: "QA Automation Engineer"
+    keywords:
+      - test engineer
+      - quality engineer
+      - qa engineer
+      - automation test
+  DATA_ENGINEER:
+    label: "Data Engineer"
+    # Data/ML titles are NOT auto-included or auto-excluded. They are routed
+    # through `ambiguous_families` below so the actual work decides.
+    keywords:
+      - data engineer
+      - data platform engineer
+      - analytics engineer
+      - etl engineer
+      - big data engineer
+  MACHINE_LEARNING_ENGINEER:
+    label: "Machine Learning Engineer"
+    keywords:
+      - machine learning engineer
+      - ml engineer
+      - mlops engineer
+      - ai engineer
+      - deep learning engineer
+      - applied scientist - engineering
+  OTHER_SOFTWARE:
+    label: "Software Engineering (Other)"
+    keywords: []
+
+# Families that always count as software engineering once matched.
+core_families:
+  - SOFTWARE_ENGINEER
+  - BACKEND_ENGINEER
+  - FRONTEND_ENGINEER
+  - FULLSTACK_ENGINEER
+  - PLATFORM_ENGINEER
+  - CLOUD_ENGINEER
+  - INFRASTRUCTURE_ENGINEER
+  - DEVOPS_ENGINEER
+  - SITE_RELIABILITY_ENGINEER
+  - SYSTEMS_ENGINEER
+  - PRODUCT_ENGINEER
+  - MOBILE_ENGINEER
+  - SECURITY_ENGINEER
+
+# Families where the title alone is not decisive. The description must show
+# real software engineering work (building/shipping/operating software), and
+# ambiguity is escalated to the LLM.
+ambiguous_families:
+  - DATA_ENGINEER
+  - MACHINE_LEARNING_ENGINEER
+  - QA_AUTOMATION_ENGINEER
+  - OTHER_SOFTWARE
+
+# Titles that are clearly NOT software engineering. Matched as whole phrases on
+# the normalized title; a posting hitting one of these is rejected without an
+# LLM call unless it also matches a core family keyword.
+excluded_title_terms:
+  - data analyst
+  - business analyst
+  - financial analyst
+  - data scientist
+  - research scientist
+  - product manager
+  - program manager
+  - project manager
+  - technical program manager
+  - product designer
+  - ux designer
+  - ui designer
+  - graphic designer
+  - sales engineer
+  - account executive
+  - customer success
+  - technical support
+  - help desk
+  - desktop support
+  - it support
+  - system administrator
+  - network administrator
+  - database administrator
+  - mechanical engineer
+  - electrical engineer
+  - civil engineer
+  - chemical engineer
+  - industrial engineer
+  - manufacturing engineer
+  - process engineer
+  - hardware engineer
+  - validation engineer
+  - recruiter
+  - technical writer
+  - scrum master
+  - salesforce administrator
+  - sap consultant
+  - marketing
+  - nurse
+  - attorney
+  - accountant
+
+# Signals in a description that indicate genuine software engineering work.
+# Used to promote ambiguous-family postings deterministically.
+software_work_signals:
+  - write code
+  - writing code
+  - production code
+  - design and implement
+  - build and ship
+  - software development lifecycle
+  - code review
+  - unit test
+  - version control
+  - ci/cd
+  - microservices
+  - rest api
+  - graphql
+  - distributed systems
+  - backend services
+  - full stack
+  - object-oriented
+  - data structures and algorithms
+  - debugging
+  - scalable services
+  - software design
+
+# Technologies that reinforce a software engineering classification.
+technology_signals:
+  - python
+  - java
+  - c++
+  - c#
+  - golang
+  - " go "
+  - rust
+  - typescript
+  - javascript
+  - react
+  - angular
+  - vue
+  - node.js
+  - spring boot
+  - django
+  - flask
+  - fastapi
+  - kubernetes
+  - docker
+  - terraform
+  - aws
+  - azure
+  - gcp
+  - postgresql
+  - kafka
+  - redis
+  - graphql
+  - git
+
+# ---------------------------------------------------------------------------
+# Seniority / experience targeting.
+# ---------------------------------------------------------------------------
+seniority:
+  # Phrases that positively identify the target band.
+  entry_level_signals:
+    - new grad
+    - new graduate
+    - new graduates
+    - recent graduate
+    - recent graduates
+    - university graduate
+    - university hire
+    - college graduate
+    - entry level
+    - entry-level
+    - early career
+    - early in career
+    - campus hire
+    - graduate program
+    - rotational program
+    - junior
+    - associate engineer
+    - engineer i
+    - software engineer 1
+    - level 1
+    - apprentice
+    - intern
+    - internship
+    - co-op
+    - coop
+    - trainee
+    - no experience required
+    - no prior experience
+  # Titles/qualifiers that reject regardless of stated years.
+  reject_title_signals:
+    - senior
+    - sr staff
+    - staff engineer
+    - staff
+    - principal
+    - distinguished
+    - fellow
+    - lead engineer
+    - lead software
+    - software lead
+    - engineering lead
+    - tech lead
+    - team lead
+    - manager
+    - director
+    - head of
+    - architect
+    - vice president
+  # Maximum required years accepted.
+  max_required_years: 2
+
+# ---------------------------------------------------------------------------
+# H-1B role-family grouping used when matching a current job against
+# historical H-1B/LCA job titles. Historical titles rarely match verbatim, so
+# we compare normalized families instead of raw strings.
+# ---------------------------------------------------------------------------
+h1b_role_groups:
+  SOFTWARE:
+    - SOFTWARE_ENGINEER
+    - BACKEND_ENGINEER
+    - FRONTEND_ENGINEER
+    - FULLSTACK_ENGINEER
+    - PLATFORM_ENGINEER
+    - PRODUCT_ENGINEER
+    - MOBILE_ENGINEER
+    - SYSTEMS_ENGINEER
+    - OTHER_SOFTWARE
+  INFRASTRUCTURE:
+    - CLOUD_ENGINEER
+    - INFRASTRUCTURE_ENGINEER
+    - DEVOPS_ENGINEER
+    - SITE_RELIABILITY_ENGINEER
+  DATA:
+    - DATA_ENGINEER
+    - MACHINE_LEARNING_ENGINEER
+  QUALITY:
+    - QA_AUTOMATION_ENGINEER
+  SECURITY:
+    - SECURITY_ENGINEER
