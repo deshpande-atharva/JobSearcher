@@ -207,7 +207,7 @@ visa:
 
 llm:
   provider: gemini
-  model: "emini-3.6-flash"
+  model: "gemini-3.6-flash"
   temperature: 0.0
   max_output_tokens: 2048
   timeout_seconds: 60
