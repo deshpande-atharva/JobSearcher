@@ -66,6 +66,10 @@ def test_workflow_commits_only_tracker_paths() -> None:
     script = commit["run"]
     assert "git add data/current data/archive" in script
     assert "git diff --cached --quiet" in script
+    assert "git fetch origin main" in script
+    assert "git rebase origin/main" in script
+    assert "git push --force" not in script
+    assert "git push origin HEAD:main" in script
     assert "git add -A" not in script
     assert "git add ." not in script
     assert ".env" not in script
