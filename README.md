@@ -379,7 +379,11 @@ Those 1,702 unavailable reviews were not role mismatches. The three fresh postin
 
 ## Email notifications
 
-SMTP, using `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, and `NOTIFICATION_EMAIL`. If configuration is missing, the log contains `WARNING: email notifications disabled` and the job run still succeeds. A later SMTP error is also a warning: the workbook and archive are already written, and the process still exits 0. The message is a short count plus new-job titles, or a note that zero matches is a valid run. It does not include the workbook.
+SMTP uses the existing names `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, and `NOTIFICATION_EMAIL`. `NOTIFICATION_FROM` is optional and defaults to `SMTP_USERNAME`. `SMTP_PORT` defaults to 587. Local values belong in gitignored `.env`. `.env.example` has empty placeholders only. GitHub Actions maps those same names from repository secrets. Do not commit a password, and do not put one in YAML.
+
+All four of host, username, password, and recipient are required before a message is sent. If any are missing, the log says email notifications are disabled (`SMTP_NOT_CONFIGURED`) and the run still exits 0. If the server rejects the login or the send fails, the log records the exception type and a redacted error. The password is removed from that message. The workbook and archive are already written, and the process still exits 0.
+
+The hosted run on 2026-09-27 reached Microsoft 365 and received `535 5.7.3 Authentication unsuccessful`. That is a rejected mailbox login, not a pipeline failure. Email delivery is not confirmed until that login is accepted. The message itself is a short count plus new-job titles, or a note that zero matches is a valid run. It does not include the workbook, job descriptions, or credentials.
 
 ---
 

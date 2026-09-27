@@ -90,6 +90,15 @@ def build_email_body(summary: RunSummary, jobs: list[Any] | None = None) -> str:
     return "\n".join(lines)
 
 
+def _safe_smtp_error(exc: BaseException, secrets: Secrets) -> str:
+    """Drop credential values before an SMTP exception reaches the log."""
+    detail = redact(str(exc))
+    for secret in (secrets.smtp_password, secrets.gemini_api_key):
+        if secret:
+            detail = detail.replace(secret, "***REDACTED***")
+    return detail
+
+
 def send_run_summary(config: AppConfig, summary: RunSummary, jobs: list[Any] | None = None) -> str:
     """Send the run summary. Returns a short status string for the report."""
     if not config.settings.notifications.enabled:
@@ -126,7 +135,7 @@ def send_run_summary(config: AppConfig, summary: RunSummary, jobs: list[Any] | N
             smtp.login(secrets.smtp_username or "", secrets.smtp_password or "")
             smtp.send_message(message)
     except Exception as exc:
-        log.warning("failed to send notification email", error=redact(str(exc)))
+        log.warning("failed to send notification email", error=_safe_smtp_error(exc, secrets))
         return f"failed ({type(exc).__name__})"
 
     log.info("notification email sent", to=secrets.notification_email)
