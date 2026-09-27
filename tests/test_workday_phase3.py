@@ -77,7 +77,7 @@ def _postings() -> list[RawJobPosting]:
             posted = now - timedelta(hours=2)
             date_source = DateSource.POSTED_DATE
         elif freshness == "stale":
-            posted = now - timedelta(hours=72)
+            posted = now - timedelta(days=40)
             date_source = DateSource.POSTED_DATE
         postings.append(
             RawJobPosting(

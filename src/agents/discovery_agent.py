@@ -63,8 +63,22 @@ async def run_discovery(state: PipelineState) -> None:
                     f"{company.name}: company discovery timed out after {timeout:.0f}s"
                 ) from None
 
+    async def crawl_all():
+        return await asyncio.gather(*(crawl(c) for c in companies), return_exceptions=True)
+
+    company_task = None
     if companies:
-        results = await asyncio.gather(*(crawl(c) for c in companies), return_exceptions=True)
+        company_task = asyncio.create_task(crawl_all())
+        # Let configured companies reach the HTTP semaphore before the archive
+        # sample queues. The sample then uses slots that open during that crawl.
+        await asyncio.sleep(0)
+    index_task = _schedule_public_index(state, ctx)
+    # Greenhouse, Ashby, and Workday samples share the existing HTTP and Workday
+    # limits. They start when the index is ready instead of waiting for every
+    # configured company to finish.
+    global_task = asyncio.create_task(_collect_indexed_boards(state, ctx, index_task))
+    if company_task is not None:
+        results = await company_task
         for company, result in zip(companies, results, strict=False):
             if isinstance(result, Exception):
                 outcome = CompanyOutcome(
@@ -82,13 +96,19 @@ async def run_discovery(state: PipelineState) -> None:
 
     failed = []
     for company in companies:
-        company_outcomes = [o for o in state.company_outcomes if o.company == company.name]
-        if not company_outcomes or not any(o.succeeded for o in company_outcomes):
+        company_outcomes = [
+            outcome
+            for outcome in state.company_outcomes
+            if outcome.company == company.name and outcome.detection_method != "global_index"
+        ]
+        if not company_outcomes or not any(outcome.succeeded for outcome in company_outcomes):
             failed.append(company.name)
 
     state.summary.companies_succeeded = len(companies) - len(failed)
     state.summary.companies_failed = len(failed)
     state.summary.failed_companies = failed
+
+    discovered.extend(await global_task)
 
     raw_count = len(discovered)
     discovered = _dedupe_raw(discovered)
@@ -129,6 +149,52 @@ async def run_discovery(state: PipelineState) -> None:
         after_dedup=len(discovered),
         companies_failed=len(failed),
     )
+
+
+async def _collect_indexed_boards(
+    state: PipelineState,
+    ctx: SourceContext,
+    index_task: asyncio.Task | None,
+) -> list[RawJobPosting]:
+    """Load the archive sample, then collect new boards. Never raises."""
+    if index_task is not None:
+        try:
+            state.resources["public_board_index"] = await index_task
+        except Exception as exc:
+            log.warning("public board index failed; continuing", error=type(exc).__name__)
+            from src.services.public_board_index import PublicBoardIndex
+
+            state.resources["public_board_index"] = PublicBoardIndex(
+                status="unavailable",
+                coverage="partial",
+                detail=f"public board index unavailable ({type(exc).__name__})",
+            )
+    try:
+        from src.services.global_boards import collect_global_boards
+
+        return await collect_global_boards(
+            state,
+            ctx,
+            index=state.resources.get("public_board_index"),
+        )
+    except Exception as exc:
+        log.warning("global board discovery failed; continuing", error=type(exc).__name__)
+        state.summary.note(
+            f"global board discovery failed ({type(exc).__name__}); configured companies continued"
+        )
+        return []
+
+
+def _schedule_public_index(state: PipelineState, ctx: SourceContext):
+    """Start the archive sample unless this run already has one or must stay offline."""
+    if state.config.fixture_mode or state.resources.get("public_board_index") is not None:
+        return None
+    settings = state.config.settings.discovery.global_boards
+    if not settings.enabled:
+        return None
+    from src.services.global_boards import resolve_public_board_index
+
+    return asyncio.create_task(resolve_public_board_index(state, ctx))
 
 
 async def _run_global_sources(state: PipelineState, ctx: SourceContext) -> list[RawJobPosting]:
@@ -498,6 +564,8 @@ def _remember_source(unique: list[RawJobPosting], key: str, incoming: RawJobPost
         if key in {id_key, url_key}:
             _remember_source_on(posting, posting.source)
             _remember_source_on(posting, incoming.source)
+            for item in incoming.provenance.get("discovered_from") or []:
+                _remember_source_on(posting, str(item))
             _remember_partitions(posting, incoming)
             _merge_authoritative_timestamp(posting, incoming)
             return
@@ -758,6 +826,9 @@ def _record_discovery_profile(state: PipelineState, ctx: SourceContext) -> None:
         "freshness_attribution": attribution,
         "date_source_counts": date_sources,
     }
+    global_boards = (state.summary.discovery_profile or {}).get("global_boards")
+    if global_boards:
+        profile["global_boards"] = global_boards
     state.summary.discovery_profile = profile
     log.info(
         "discovery profile",

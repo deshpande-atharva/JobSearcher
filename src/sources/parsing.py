@@ -69,6 +69,24 @@ def parse_html(html: str) -> BeautifulSoup:
     return BeautifulSoup(html or "", _PARSER)
 
 
+def pick_list(payload: Any, *keys: str) -> list[Any] | None:
+    """Return a list field, including an explicit empty list.
+
+    ``pick`` treats ``[]`` as missing. An ATS board that returns ``jobs: []``
+    is empty, not a broken payload. A missing key stays ``None``.
+    """
+    if not isinstance(payload, dict):
+        return None
+    lowered = {str(key).lower(): value for key, value in payload.items()}
+    for key in keys:
+        if key.lower() not in lowered:
+            continue
+        value = lowered[key.lower()]
+        if isinstance(value, list):
+            return value
+    return None
+
+
 def pick(payload: Any, *keys: str, default: Any = None) -> Any:
     """First non-empty value among ``keys`` in a mapping, case-insensitively."""
     if not isinstance(payload, dict):

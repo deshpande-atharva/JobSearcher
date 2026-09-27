@@ -208,12 +208,15 @@ def test_employment_types_keep_target_and_reject_others() -> None:
 def test_fresh_preview_is_diagnostic_and_stage_aware(tmp_config) -> None:
     fresh_url = "https://boards.greenhouse.io/example/jobs/1"
     senior_url = "https://boards.greenhouse.io/example/jobs/2"
+    # is_fresh measures age from the real clock. Keep the two fresh rows inside
+    # 24 hours and the stale row outside it, without changing the funnel counts.
+    moment = datetime.now(timezone.utc)
     stale = RawJobPosting(
         source="greenhouse",
         company_name="Example",
         title="Software Engineer",
         apply_url="https://boards.greenhouse.io/example/jobs/3",
-        posted_at=NOW - timedelta(days=10),
+        posted_at=moment - timedelta(days=10),
         date_source=DateSource.POSTED_DATE,
         description="private description that must not be copied",
     )
@@ -224,7 +227,7 @@ def test_fresh_preview_is_diagnostic_and_stage_aware(tmp_config) -> None:
         location_raw="Singapore",
         job_id="8232474",
         apply_url=fresh_url,
-        posted_at=NOW - timedelta(hours=2),
+        posted_at=moment - timedelta(hours=2),
         date_source=DateSource.POSTED_DATE,
         description="private description that must not be copied",
     )
@@ -235,7 +238,7 @@ def test_fresh_preview_is_diagnostic_and_stage_aware(tmp_config) -> None:
         location_raw="Boston, MA",
         job_id="2",
         apply_url=senior_url,
-        posted_at=NOW - timedelta(hours=1),
+        posted_at=moment - timedelta(hours=1),
         date_source=DateSource.POSTED_DATE,
         description="Required Qualifications\n5+ years of experience.",
     )

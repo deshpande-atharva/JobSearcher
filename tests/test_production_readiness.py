@@ -125,7 +125,7 @@ async def test_production_fixture_reaches_one_final_job(tmp_config) -> None:
     async def greenhouse():
         return [
             _posting("greenhouse", "fresh", method="structured"),
-            _posting("greenhouse", "stale", posted_at=now - timedelta(hours=80)),
+            _posting("greenhouse", "stale", posted_at=now - timedelta(days=40)),
             _posting(
                 "greenhouse",
                 "senior",

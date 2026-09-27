@@ -98,6 +98,7 @@ async def run_pipeline(config: AppConfig, *, resources: dict[str, Any] | None = 
         summary=state_summary(config),
     )
     state.resources["existing_rows"] = history.existing_rows
+    state.resources["sightings"] = dict(history.sightings)
 
     owns_http = False
     owns_llm = False
@@ -111,6 +112,8 @@ async def run_pipeline(config: AppConfig, *, resources: dict[str, Any] | None = 
         llm = build_llm_provider(config)
         owns_llm = True
 
+    if injected.get("public_board_index") is not None:
+        state.resources["public_board_index"] = injected["public_board_index"]
     state.resources["http"] = http
     state.resources["llm"] = llm
     state.resources["h1b"] = injected.get("h1b") or H1BGraderClient(config, http=http)

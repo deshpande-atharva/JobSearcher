@@ -73,7 +73,7 @@ def build_email_body(summary: RunSummary, jobs: list[Any] | None = None) -> str:
         lines.extend(
             [
                 "The pipeline completed successfully.",
-                "No jobs matched the production 24-hour criteria.",
+                "No jobs matched the configured freshness and qualification rules.",
                 "This is a valid zero-result run.",
             ]
         )

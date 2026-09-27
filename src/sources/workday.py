@@ -136,7 +136,12 @@ class WorkdaySource(DiscoverySource):
             )
         return result.jobs
 
-    async def discover_result(self, company: CompanyConfig | None = None) -> SourceResult:
+    async def discover_result(
+        self,
+        company: CompanyConfig | None = None,
+        *,
+        seed_page: dict[str, Any] | None = None,
+    ) -> SourceResult:
         """CXS and HTML fallback are recorded separately. HTTP 400 is never EMPTY."""
         label = company.name if company else "*"
         started = time.perf_counter()
@@ -187,6 +192,7 @@ class WorkdaySource(DiscoverySource):
                 page_size=page_size,
                 max_jobs=max_jobs,
                 search_text="",
+                seed_page=seed_page,
             )
             diagnostics.update(cxs_diag)
         except SourceError as exc:
@@ -304,6 +310,7 @@ class WorkdaySource(DiscoverySource):
         max_jobs: int,
         search_text: str = "",
         company_pages: list[int] | None = None,
+        seed_page: dict[str, Any] | None = None,
     ) -> tuple[list[Any], dict[str, Any]]:
         url = f"https://{host}/wday/cxs/{tenant}/{site}/jobs"
         collected: list[Any] = []
@@ -314,84 +321,95 @@ class WorkdaySource(DiscoverySource):
         max_offset = max(max_jobs, page_size)
         settings = self.config.settings.discovery.sources.workday
         company_pages = company_pages if company_pages is not None else [0]
+        # A global board already paid for offset 0 during validation. Reuse that
+        # payload as page one. Configured boards pass no seed and POST as before.
+        seed = seed_page if isinstance(seed_page, dict) and not search_text else None
 
         for offset in range(0, max_offset, page_size):
-            if not self._workday_request_allowed(settings, company_pages[0]):
-                break
-            body = cxs_request_body(limit=page_size, offset=offset, search_text=search_text)
-            self._charge_workday_request(company_pages)
-            result = await self.http.request(
-                "POST",
-                url,
-                json_body=body,
-                expect_json=True,
-                headers={
-                    "Accept": "application/json",
-                    "Content-Type": "application/json",
-                    "Origin": f"https://{host}",
-                    "Referer": referer,
-                },
-            )
-            last_status = result.status
-            pages += 1
-            self.log.info(
-                "workday cxs page",
-                company=company,
-                ats="workday",
-                tenant=tenant,
-                site=site,
-                endpoint=url,
-                http_status=result.status,
-                request_attempt=1,
-                pagination_offset=offset,
-                partition=search_text or "unfiltered",
-                response_size=len(result.text or ""),
-                fallback_used=False,
-                failure_reason=None if result.ok else (result.error or f"HTTP {result.status}"),
-            )
-            if result.blocked_by_robots:
-                raise SourceError(
-                    f"Workday CXS disallowed by robots.txt: {url}",
-                    status="BLOCKED",
-                    http_status=result.status,
-                    diagnostics={"endpoint": url, "tenant": tenant, "site": site, "pages": pages},
+            reused = seed is not None and offset == 0
+            if reused:
+                payload = seed
+                seed = None
+                last_status = 200
+                pages += 1
+                company_pages[0] += 1
+            else:
+                if not self._workday_request_allowed(settings, company_pages[0]):
+                    break
+                body = cxs_request_body(limit=page_size, offset=offset, search_text=search_text)
+                self._charge_workday_request(company_pages)
+                result = await self.http.request(
+                    "POST",
+                    url,
+                    json_body=body,
+                    expect_json=True,
+                    headers={
+                        "Accept": "application/json",
+                        "Content-Type": "application/json",
+                        "Origin": f"https://{host}",
+                        "Referer": referer,
+                    },
                 )
-            if not result.ok:
-                reason = result.error or f"HTTP {result.status}"
-                preview = result.body_preview
-                if offset == 0:
+                last_status = result.status
+                pages += 1
+                self.log.info(
+                    "workday cxs page",
+                    company=company,
+                    ats="workday",
+                    tenant=tenant,
+                    site=site,
+                    endpoint=url,
+                    http_status=result.status,
+                    request_attempt=1,
+                    pagination_offset=offset,
+                    partition=search_text or "unfiltered",
+                    response_size=len(result.text or ""),
+                    fallback_used=False,
+                    failure_reason=None if result.ok else (result.error or f"HTTP {result.status}"),
+                )
+                if result.blocked_by_robots:
                     raise SourceError(
-                        f"Workday CXS {reason}",
+                        f"Workday CXS disallowed by robots.txt: {url}",
+                        status="BLOCKED",
                         http_status=result.status,
-                        diagnostics={
-                            "endpoint": url,
-                            "tenant": tenant,
-                            "site": site,
-                            "http_status": result.status,
-                            "pagination_offset": offset,
-                            "response_size": len(result.text or ""),
-                            "response_preview": preview,
-                            "pages": pages,
-                        },
+                        diagnostics={"endpoint": url, "tenant": tenant, "site": site, "pages": pages},
                     )
-                # A later page failed; keep jobs already collected.
-                break
-            payload = result.json()
-            if payload is None:
-                if offset == 0:
-                    raise SourceError(
-                        "Workday CXS did not return JSON",
-                        http_status=result.status,
-                        diagnostics={
-                            "endpoint": url,
-                            "tenant": tenant,
-                            "site": site,
-                            "http_status": result.status,
-                            "response_preview": result.body_preview,
-                            "pages": pages,
-                        },
-                    )
-                break
+                if not result.ok:
+                    reason = result.error or f"HTTP {result.status}"
+                    preview = result.body_preview
+                    if offset == 0:
+                        raise SourceError(
+                            f"Workday CXS {reason}",
+                            http_status=result.status,
+                            diagnostics={
+                                "endpoint": url,
+                                "tenant": tenant,
+                                "site": site,
+                                "http_status": result.status,
+                                "pagination_offset": offset,
+                                "response_size": len(result.text or ""),
+                                "response_preview": preview,
+                                "pages": pages,
+                            },
+                        )
+                    # A later page failed; keep jobs already collected.
+                    break
+                payload = result.json()
+                if payload is None:
+                    if offset == 0:
+                        raise SourceError(
+                            "Workday CXS did not return JSON",
+                            http_status=result.status,
+                            diagnostics={
+                                "endpoint": url,
+                                "tenant": tenant,
+                                "site": site,
+                                "http_status": result.status,
+                                "response_preview": result.body_preview,
+                                "pages": pages,
+                            },
+                        )
+                    break
             batch = pick(payload, "jobPostings", default=None)
             if not isinstance(batch, list) or not batch:
                 break

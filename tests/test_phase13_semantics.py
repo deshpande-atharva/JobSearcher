@@ -327,7 +327,7 @@ async def test_negative_fresh_jobs_keep_the_first_rejection(tmp_config) -> None:
 
     code, _state = await reason(_fresh_job(
         job_id="stale",
-        posted_at=utcnow() - timedelta(hours=25),
+        posted_at=utcnow() - timedelta(days=40),
         direct_application_url="https://boards.greenhouse.io/acmerobotics/jobs/stale",
     ))
     assert code == "STALE_JOB"

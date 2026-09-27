@@ -360,6 +360,10 @@ class Job(BaseModel):
     updated_at: datetime | None = None
     date_source: DateSource = DateSource.UNKNOWN
     found_at: datetime = Field(default_factory=utcnow)
+    # Discovery metadata. Never a substitute for posted_at or updated_at.
+    first_seen_at: datetime | None = Field(default=None, exclude=True)
+    last_seen_at: datetime | None = Field(default=None, exclude=True)
+    freshness_tier: str = Field(default="", exclude=True)
 
     # --- provenance ---------------------------------------------------------
     job_id: str | None = None

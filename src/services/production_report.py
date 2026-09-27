@@ -230,6 +230,92 @@ def production_source_state(health) -> str:
     return "EMPTY"
 
 
+def _global_board_line(summary) -> str:
+    profile = (summary.discovery_profile or {}).get("global_boards") or {}
+    if not profile:
+        return "global_boards: not_run coverage=not_queried"
+    parts = [
+        f"status={profile.get('status', 'unknown')}",
+        f"coverage={profile.get('coverage', 'partial')}",
+    ]
+    for name in ("greenhouse", "ashby", "workday"):
+        board = profile.get(name) or {}
+        if not board or board.get("status") == "disabled":
+            continue
+        parts.append(
+            f"{name}_discovered={board.get('discovered_boards', 0)} "
+            f"{name}_valid={board.get('valid_boards', 0)} "
+            f"{name}_invalid={board.get('invalid_boards', 0)} "
+            f"{name}_failed={board.get('failed_boards', 0)} "
+            f"{name}_empty={board.get('empty_boards', 0)} "
+            f"{name}_complete={board.get('complete_boards', 0)} "
+            f"{name}_partial={board.get('partial_boards', 0)} "
+            f"{name}_duplicate={board.get('duplicate_boards', 0)} "
+            f"{name}_configured_overlap={board.get('configured_overlap', 0)} "
+            f"{name}_selected={board.get('selected_boards', 0)} "
+            f"{name}_jobs={board.get('jobs', 0)}"
+        )
+    return "global_boards: " + " ".join(parts)
+
+
+def _workday_global_line(state: PipelineState) -> str:
+    """Configured boards plus the bounded archive sample. Coverage stays partial."""
+    profile = (state.summary.discovery_profile or {}).get("global_boards") or {}
+    board = profile.get("workday") or {}
+    if not board or board.get("status") == "disabled":
+        return "workday_global: disabled GLOBAL DISCOVERY: PARTIAL COVERAGE"
+    skipped = board.get("duplicate_boards_skipped")
+    if skipped is None:
+        skipped = int(board.get("duplicate_boards") or 0) + int(
+            board.get("configured_overlap") or 0
+        )
+    successful = int(board.get("complete_boards") or 0) + int(board.get("partial_boards") or 0)
+    selected = board.get("boards_selected_for_collection", board.get("selected_boards", 0))
+    collected = board.get(
+        "unique_boards_collected",
+        successful + int(board.get("empty_boards") or 0),
+    )
+    return (
+        "workday_global: GLOBAL DISCOVERY: PARTIAL COVERAGE "
+        f"configured_boards={board.get('configured_boards', 0)} "
+        f"globally_discovered_boards={board.get('discovered_boards', 0)} "
+        f"duplicate_boards_skipped={skipped} "
+        f"boards_selected_for_collection={selected} "
+        f"unique_boards_collected={collected} "
+        f"successful_boards={successful} "
+        f"complete_boards={board.get('complete_boards', 0)} "
+        f"failed_boards={board.get('failed_boards', 0)} "
+        f"empty_boards={board.get('empty_boards', 0)} "
+        f"partial_boards={board.get('partial_boards', 0)} "
+        f"jobs_discovered={board.get('jobs', 0)} "
+        f"index_seconds={profile.get('index_seconds', 0)} "
+        f"collection_seconds={board.get('collection_seconds', 0)}"
+    )
+
+
+def _freshness_tier_line(state: PipelineState) -> str:
+    policy = state.config.settings.freshness
+    tiers = policy.tiers
+    counts = state.summary.freshness_tiers or {}
+    rendered = " ".join(f"{name}={counts.get(name, 0)}" for name in (
+        "VERY_FRESH",
+        "FRESH",
+        "RECENT",
+        "AGING",
+        "STALE",
+        "OLD",
+        "UNKNOWN",
+    ))
+    return (
+        "freshness_tiers: "
+        f"enabled={str(policy.enabled).lower()} "
+        f"eligible_through={policy.eligible_through} "
+        f"cuts={tiers.very_fresh_hours:g}/{tiers.fresh_hours:g}/{tiers.recent_hours:g}/"
+        f"{tiers.aging_hours:g}/{tiers.stale_hours:g} "
+        + rendered
+    )
+
+
 def render_pipeline_health(state: PipelineState) -> str:
     summary = state.summary
     sources = state.config.settings.discovery.sources
@@ -253,6 +339,9 @@ def render_pipeline_health(state: PipelineState) -> str:
         f"dry_run: {str(state.config.dry_run).lower()}",
         f"workday_browser_enabled: {str(sources.workday.browser_enabled).lower()}",
         f"jobright_enabled: {str(sources.jobright.enabled).lower()}",
+        _global_board_line(summary),
+        _workday_global_line(state),
+        _freshness_tier_line(state),
         (
             "source_caps: "
             f"greenhouse=full-board "

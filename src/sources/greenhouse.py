@@ -16,7 +16,7 @@ from src.models.config import CompanyConfig
 from src.models.job import DateSource, RawJobPosting
 from src.sources.base import DiscoverySource, SourceError
 from src.sources.fixtures import FixtureStore, slugify
-from src.sources.parsing import collect_postings, pick
+from src.sources.parsing import collect_postings, pick, pick_list
 from src.utils.dates import parse_datetime
 from src.utils.normalization import clean_text, html_to_text
 
@@ -47,7 +47,7 @@ class GreenhouseSource(DiscoverySource):
                 API_TEMPLATE.format(token=token), params={"content": "true"}
             )
 
-        jobs = pick(payload, "jobs", default=None)
+        jobs = pick_list(payload, "jobs")
         if not isinstance(jobs, list):
             raise SourceError(f"unexpected Greenhouse payload for board {token!r}")
 

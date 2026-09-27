@@ -426,7 +426,7 @@ async def test_h1b_lookup_does_not_run_after_a_freshness_rejection(tmp_config) -
             self.calls += 1
             return None
 
-    stale = make_job(posted_at=NOW - timedelta(days=5), date_source=DateSource.POSTED_DATE)
+    stale = make_job(posted_at=NOW - timedelta(days=40), date_source=DateSource.POSTED_DATE)
     state = PipelineState(config=tmp_config, jobs=[stale], resources={"h1b": Spy(), "llm": NullLLMProvider()})
     await run_freshness(state)
     assert state.jobs == []

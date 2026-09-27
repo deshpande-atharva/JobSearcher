@@ -7,8 +7,8 @@
 # ---------------------------------------------------------------------------
 
 run:
-  # Production freshness window. Real elapsed UTC hours, not a calendar date.
-  # GitHub Actions uses this value. --freshness-hours is diagnostic only.
+  # Observational window used by previews and --freshness-hours.
+  # The daily tracker uses the freshness tiers below, not this cutoff.
   freshness_hours: 24
   # If posted_at is missing, age may be taken from updated_at. Posted and
   # updated dates are never merged into one fabricated posted_at.
@@ -26,6 +26,22 @@ run:
   # (~3100 Greenhouse + ~6300 Workday + Lever/Ashby/career). Truncation,
   # if it ever happens, is round-robin by company and reported.
   max_jobs_per_run: 15000
+
+# Daily eligibility. Age is elapsed UTC time from the employer timestamp.
+# VERY_FRESH <24h, FRESH <72h, RECENT <168h, AGING <336h, STALE <720h, else OLD.
+# VERY_FRESH, FRESH, and RECENT stay eligible. AGING stays eligible only when
+# role and seniority already passed deterministically. STALE, OLD, and UNKNOWN
+# stay out of the daily workbook. first_seen_at is not a posting date.
+freshness:
+  enabled: true
+  eligible_through: RECENT
+  aging_if_strongly_qualified: true
+  tiers:
+    very_fresh_hours: 24
+    fresh_hours: 72
+    recent_hours: 168
+    aging_hours: 336
+    stale_hours: 720
 
 discovery:
   sources:
@@ -94,6 +110,22 @@ discovery:
   # Career fallback stage budget. The company timeout remains 240s.
   career_stage_budget_seconds: 90
   skip_career_page_when_ats_has_jobs: true
+  # Extra public boards beyond companies.yaml.
+  # Internet Archive CDX samples, rotated by UTC date.
+  # Not a complete directory. Workday is the same kind of partial sample:
+  # public career hosts only, then the existing CXS collector.
+  # A Workday board's pagination uses run.company_timeout_seconds so a
+  # board can reach the public 2,000-job cap instead of being cut off early.
+  global_boards:
+    enabled: true
+    greenhouse: true
+    ashby: true
+    workday: true
+    max_index_urls: 40
+    max_boards_per_run: 8
+    prefixes_per_run: 4
+    index_timeout_seconds: 40
+    board_timeout_seconds: 45
 
 filters:
   # Employment types kept in the output. See EmploymentType enum.

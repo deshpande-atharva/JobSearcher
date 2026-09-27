@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from src.models.config import AppConfig
@@ -21,6 +21,8 @@ class HistoryIndex:
     known_keys: set[str] = field(default_factory=set)
     tracking: dict[str, dict[str, str]] = field(default_factory=dict)
     existing_rows: list[dict[str, str]] = field(default_factory=list)
+    # Earliest and latest workbook sighting. Not an employer posted date.
+    sightings: dict[str, tuple[datetime, datetime]] = field(default_factory=dict)
 
 
 def load_history(config: AppConfig) -> HistoryIndex:
@@ -61,11 +63,18 @@ def _ingest(index: HistoryIndex, path: Path, *, preserve_rows: bool) -> None:
         log.warning("could not read workbook", path=str(path), error=str(exc))
         return
 
+    stamp = _seen_stamp(path)
     for row in rows:
         key = row_dedup_key(row)
         if not key:
             continue
         index.known_keys.add(key)
+        if stamp is not None:
+            previous = index.sightings.get(key)
+            if previous is None:
+                index.sightings[key] = (stamp, stamp)
+            else:
+                index.sightings[key] = (min(previous[0], stamp), max(previous[1], stamp))
         applied = row.get("Applied") or ""
         status = row.get("Status") or ""
         if applied or status:
@@ -80,6 +89,17 @@ def _ingest(index: HistoryIndex, path: Path, *, preserve_rows: bool) -> None:
 
 def _archive_stamp(path: Path):
     return parse_datetime(path.stem)
+
+
+def _seen_stamp(path: Path) -> datetime | None:
+    """Archive date, or the workbook's modification time for the current file."""
+    stamped = _archive_stamp(path)
+    if stamped is not None:
+        return stamped
+    try:
+        return datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc)
+    except OSError:
+        return None
 
 
 def _coerce_applied(value: str) -> str:

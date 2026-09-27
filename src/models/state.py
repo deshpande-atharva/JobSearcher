@@ -122,6 +122,7 @@ class RunSummary(BaseModel):
     jobs_accepted: int = 0
     unknown_timestamps: int = 0
     freshness_hours_used: float = 24.0
+    freshness_tiers: dict[str, int] = Field(default_factory=dict)
     source_health: dict[str, SourceHealth] = Field(default_factory=dict)
     empty_sources: list[str] = Field(default_factory=list)
     company_discovery_rows: list[Any] = Field(default_factory=list)
@@ -477,7 +478,7 @@ class RunSummary(BaseModel):
             f"- {self.rejected_by_seniority} seniority mismatch",
             f"- {self.rejected_by_location} non-US / international",
             f"- {self.rejected_by_employment_type} employment mismatch",
-            f"- {self.rejected_by_freshness} older than freshness window "
+            f"- {self.rejected_by_freshness} outside eligible freshness tiers "
             f"({self.unknown_timestamps} unknown timestamps)",
             f"- {self.rejected_by_invalid_url} invalid/missing direct URL",
             f"- {self.duplicates_removed} in-run duplicates",
@@ -514,6 +515,9 @@ class RunSummary(BaseModel):
                 f"  older than {hours:g}h: {data.get('updated_older', 0)}",
                 "Unknown:",
                 f"  {data.get('unknown', 0)}",
+                "Tiers: " + " ".join(
+                    f"{name}={count}" for name, count in self.freshness_tiers.items() if count
+                ),
             ]
         )
 

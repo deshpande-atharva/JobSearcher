@@ -149,6 +149,25 @@ class DiscoverySources(_Base):
         return bool(entry and entry.enabled)
 
 
+class GlobalBoardSettings(_Base):
+    """Bounded public-board sample beyond companies.yaml.
+
+    Greenhouse, Ashby, and Workday each keep their configured companies and
+    add a partial archive sample. Career pages stay configured-only. The
+    Workday sample is not a complete customer directory.
+    """
+
+    enabled: bool = True
+    greenhouse: bool = True
+    ashby: bool = True
+    workday: bool = True
+    max_index_urls: int = Field(default=40, ge=1, le=500)
+    max_boards_per_run: int = Field(default=8, ge=0, le=40)
+    prefixes_per_run: int = Field(default=4, ge=1, le=8)
+    index_timeout_seconds: float = Field(default=40.0, gt=0, le=90)
+    board_timeout_seconds: float = Field(default=45.0, gt=0, le=120)
+
+
 class DiscoverySettings(_Base):
     sources: DiscoverySources = DiscoverySources()
     ats_registry: str = "config/ats_registry.yaml"
@@ -161,6 +180,37 @@ class DiscoverySettings(_Base):
     # navigation is already capped at 45s; this bounds the rest of the fallback.
     career_stage_budget_seconds: float = Field(default=90.0, gt=0, le=240)
     skip_career_page_when_ats_has_jobs: bool = True
+    global_boards: GlobalBoardSettings = GlobalBoardSettings()
+
+
+class FreshnessTierSettings(_Base):
+    very_fresh_hours: float = Field(default=24.0, gt=0)
+    fresh_hours: float = Field(default=72.0, gt=0)
+    recent_hours: float = Field(default=168.0, gt=0)
+    aging_hours: float = Field(default=336.0, gt=0)
+    stale_hours: float = Field(default=720.0, gt=0)
+
+    @model_validator(mode="after")
+    def _strictly_increasing(self) -> FreshnessTierSettings:
+        values = (
+            self.very_fresh_hours,
+            self.fresh_hours,
+            self.recent_hours,
+            self.aging_hours,
+            self.stale_hours,
+        )
+        if any(left >= right for left, right in zip(values, values[1:], strict=False)):
+            raise ValueError("freshness tier hours must be strictly increasing")
+        return self
+
+
+class FreshnessSettings(_Base):
+    """Daily eligibility window. Separate from the observational 24-hour check."""
+
+    enabled: bool = True
+    tiers: FreshnessTierSettings = FreshnessTierSettings()
+    eligible_through: Literal["VERY_FRESH", "FRESH", "RECENT"] = "RECENT"
+    aging_if_strongly_qualified: bool = True
 
 
 class FilterSettings(_Base):
@@ -302,6 +352,7 @@ class Settings(_Base):
     """Root model for ``config/settings.yaml``."""
 
     run: RunSettings = RunSettings()
+    freshness: FreshnessSettings = FreshnessSettings()
     discovery: DiscoverySettings = DiscoverySettings()
     filters: FilterSettings = FilterSettings()
     urls: UrlSettings = UrlSettings()

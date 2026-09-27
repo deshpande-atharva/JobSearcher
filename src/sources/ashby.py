@@ -17,7 +17,7 @@ from src.models.job import DateSource, RawJobPosting
 from src.services.board_priority import cap_board_postings
 from src.sources.base import DiscoverySource, SourceError, SourceResult
 from src.sources.fixtures import FixtureStore, slugify
-from src.sources.parsing import collect_postings, pick
+from src.sources.parsing import collect_postings, pick, pick_list
 from src.utils.dates import parse_datetime
 from src.utils.normalization import clean_text, html_to_text
 from src.utils.urls import extract_job_id, host_of, is_http_url
@@ -57,7 +57,7 @@ class AshbySource(DiscoverySource):
                 params={"includeCompensation": "true"},
             )
 
-        jobs = pick(payload, "jobs", default=None)
+        jobs = pick_list(payload, "jobs")
         if not isinstance(jobs, list):
             raise SourceError(f"unexpected Ashby payload for board {handle!r}")
 
@@ -105,14 +105,12 @@ class AshbySource(DiscoverySource):
         if not title and not job_url:
             return None
 
-        locations = [str(pick(entry, "location") or "")]
+        locations: list[str] = []
+        primary = pick(entry, "location")
+        locations.extend(_ashby_places(primary))
         for secondary in pick(entry, "secondaryLocations", default=[]) or []:
-            if isinstance(secondary, dict):
-                label = pick(secondary, "location", "name")
-                if label:
-                    locations.append(str(label))
-            elif secondary:
-                locations.append(str(secondary))
+            locations.extend(_ashby_places(secondary))
+        locations.extend(_ashby_places(pick(entry, "address")))
         location_raw = "; ".join(dict.fromkeys(loc for loc in locations if loc.strip()))
 
         description = html_to_text(str(pick(entry, "descriptionHtml") or "")) or clean_text(
@@ -163,6 +161,45 @@ class AshbySource(DiscoverySource):
                 "official_source": "ashby" if official else "",
             },
         )
+
+
+def _ashby_places(value: Any) -> list[str]:
+    """Location labels plus postal locality/region/country when Ashby provides them.
+
+    A bare city such as ``Sunnyvale`` is not enough to treat a job as U.S.
+    The postal region is employer data, not a guess from the company name.
+    """
+    if value is None:
+        return []
+    if isinstance(value, str):
+        text = value.strip()
+        return [text] if text else []
+    if not isinstance(value, dict):
+        return []
+    places: list[str] = []
+    label = pick(value, "location", "name", "locationName")
+    if isinstance(label, str) and label.strip():
+        places.append(label.strip())
+    elif isinstance(label, dict):
+        places.extend(_ashby_places(label))
+    postal = _postal_label(value.get("postalAddress")) or _postal_label(value.get("address"))
+    if postal:
+        places.append(postal)
+    return places
+
+
+def _postal_label(value: Any) -> str:
+    if not isinstance(value, dict):
+        return ""
+    postal = value.get("postalAddress") if isinstance(value.get("postalAddress"), dict) else value
+    if not isinstance(postal, dict):
+        return ""
+    parts = [
+        postal.get("addressLocality"),
+        postal.get("addressRegion"),
+        postal.get("addressCountry"),
+    ]
+    return ", ".join(str(part).strip() for part in parts if part and str(part).strip())
 
 
 def _board_stamp(raw: object, source: DateSource) -> tuple[object, DateSource]:

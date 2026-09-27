@@ -105,7 +105,7 @@ async def test_cross_source_fixture_dedupes_without_merging_distinct_jobs(tmp_co
         _posting("greenhouse", "1001"),
         _posting("greenhouse", "1002"),
         _posting("greenhouse", "1003", location="New York, NY"),
-        _posting("greenhouse", "1004", posted_at=now - timedelta(hours=80)),
+        _posting("greenhouse", "1004", posted_at=now - timedelta(days=40)),
         _posting("greenhouse", "1005", location="London, United Kingdom"),
         _posting(
             "greenhouse",

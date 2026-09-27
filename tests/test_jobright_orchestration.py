@@ -181,7 +181,7 @@ async def test_jobright_and_greenhouse_collapse_to_one_official_job(tmp_config) 
 async def test_jobright_fixtures_share_the_qualification_pipeline(tmp_config) -> None:
     source = _source(tmp_config)
     fresh = _entry(source, jobId="jr-fresh", applyUrl="https://boards.greenhouse.io/example/jobs/2001")
-    stale = _entry(source, jobId="jr-stale", applyUrl="https://boards.greenhouse.io/example/jobs/2002", postedAt="5 days ago")
+    stale = _entry(source, jobId="jr-stale", applyUrl="https://boards.greenhouse.io/example/jobs/2002", postedAt="40 days ago")
     senior = _entry(
         source,
         jobId="jr-senior",

@@ -137,7 +137,7 @@ def test_board_job_cap_is_recorded(tmp_config) -> None:
 async def test_lever_fixtures_share_qualification_and_collapse_duplicates(tmp_config) -> None:
     fresh = _lever(tmp_config)
     duplicate = _lever(tmp_config)
-    stale = _lever(tmp_config, id="aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeee01", createdAt="5 days ago", hostedUrl=LEVER_URL.replace("eeeeeeeeeeee", "eeeeeeeeee01"))
+    stale = _lever(tmp_config, id="aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeee01", createdAt="40 days ago", hostedUrl=LEVER_URL.replace("eeeeeeeeeeee", "eeeeeeeeee01"))
     senior = _lever(
         tmp_config,
         id="aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeee02",
@@ -327,7 +327,7 @@ async def test_ashby_negative_fixtures_leave_the_fresh_official_job(tmp_config) 
         tmp_config,
         id="bbbbbbbb-cccc-dddd-eeee-ffffffffff02",
         jobUrl=ASHBY_URL.replace("ffffffffffff", "ffffffffff02"),
-        publishedAt="6 days ago",
+        publishedAt="40 days ago",
     )
     senior = _ashby(
         tmp_config,

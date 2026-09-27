@@ -65,21 +65,21 @@ XLSX Output
 
 Employment checks run after location passes, inside the location node. The critic runs after job intelligence, inside the intelligence node. Neither step reorders the gates above.
 
-Deterministic gates run before semantic review. A title that is clearly software engineering, or clearly not, never waits on Gemini. Gemini is optional. It cannot change job id, source, official URL, posted timestamp, date source, location, or freshness. Freshness stays a deterministic 24-hour check. H-1B enrichment never removes a job.
+Deterministic gates run before semantic review. A title that is clearly software engineering, or clearly not, never waits on Gemini. Gemini is optional. It cannot change job id, source, official URL, posted timestamp, date source, location, or freshness. Freshness is a deterministic tier from the employer timestamp. H-1B enrichment never removes a job.
 
-Production discovery uses Greenhouse, Workday, Lever, Ashby, and company career pages. Jobright is disabled. Workday browser discovery is disabled. iCIMS and SmartRecruiters can be recognized on a public URL, but they are not orchestrated production collectors. One source failing does not stop the others. A source that succeeds and returns zero jobs is empty, not failed.
+Production discovery uses configured companies plus a bounded public sample of Greenhouse, Ashby, and Workday boards. Career pages stay on the configured-company list. Jobright is disabled. Workday browser discovery is disabled. iCIMS and SmartRecruiters can be recognized on a public URL, but they are not orchestrated production collectors. One source or one board failing does not stop the others. A source that succeeds and returns zero jobs is empty, not failed. A board that cannot be retrieved is failed, not empty.
 
 ### Agents
 
 | Agent | Role |
 | --- | --- |
-| Discovery | Greenhouse, Workday, Lever, Ashby, company career pages. Jobright stays off. |
+| Discovery | Configured companies, plus a bounded public Greenhouse/Ashby board sample. Jobright stays off. |
 | Extraction | Raw payload → `Job` |
 | Role classification | Deterministic accept, deterministic reject, or semantic review |
 | Seniority / experience | New grad / 0–2 years; preferred years never reject |
 | Location | U.S. only, including U.S. remote |
 | Employment | Full-time / Contract / Internship / Co-op, after location passes |
-| Freshness | Last 24 hours of *elapsed* UTC time |
+| Freshness | Employer-timestamp tiers. Recent jobs stay eligible; stale and old jobs do not. |
 | Direct URL verification | Official ATS or company posting only |
 | H-1B evidence | Historical + current language, never a filter |
 | Deduplication | `company + job_id`, else title+location+URL |
@@ -129,7 +129,7 @@ The production set includes verified Greenhouse / Lever / Ashby / Workday boards
 
 Leave `ats.type: auto` and `identifier: null` to let the pipeline detect a public board from `careers_url`. Verify a manual identifier against the public board or API before adding it.
 
-Every run prints **DISCOVERY HEALTH**, a **SOURCE SUMMARY**, a **FILTER FUNNEL**, **DISCOVERY COVERAGE**, **FRESHNESS BY SOURCE**, and a **COMPANY DISCOVERY REPORT** so an empty spreadsheet is explainable (source down vs 0 jobs vs role vs seniority vs 24h freshness vs missing URL).
+Every run prints **DISCOVERY HEALTH**, a **SOURCE SUMMARY**, a **FILTER FUNNEL**, **DISCOVERY COVERAGE**, **FRESHNESS BY SOURCE**, global board counts, freshness tiers, and a **COMPANY DISCOVERY REPORT** so an empty spreadsheet is explainable (source down vs 0 jobs vs role vs seniority vs freshness tier vs missing URL).
 
 Source outcomes are classified as `OK`, `EMPTY`, `ERROR`, `BLOCKED`, or `UNSUPPORTED`. A Workday HTTP 400 is `ERROR`, never `EMPTY`. `python -m src.main --source-health` probes public ATS endpoints and each enabled Workday CXS board with the same `limit=20` payload the adapter uses.
 
@@ -157,9 +157,30 @@ Job IDs, URLs, dates, and company names are never invented.
 
 **Employment type.** Full-time, Contract, Internship, Co-op.
 
-**Freshness.** Posted within the last 24 hours of real elapsed UTC time. Production and GitHub Actions stay at 24 hours. `--freshness-hours 72` is diagnostic only.
+**Freshness.** Elapsed UTC time from the employer timestamp, not from the crawl.
 
-Rule: use `posted_at` when present; otherwise use `updated_at` if `freshness_use_updated_when_posted_missing` is true; otherwise `UNKNOWN` (not accepted). An updated timestamp is never rewritten as a posted date. `DISCOVERED_DATE` is not treated as fresh.
+| Tier | Age | Daily tracker |
+| --- | --- | --- |
+| VERY_FRESH | under 24 hours | eligible |
+| FRESH | 24 hours up to 72 hours | eligible |
+| RECENT | 72 hours up to 168 hours (7 days) | eligible |
+| AGING | 168 hours up to 336 hours (14 days) | eligible only when role and seniority already passed deterministically |
+| STALE | 336 hours up to 720 hours (30 days) | excluded |
+| OLD | 720 hours or more | excluded |
+| UNKNOWN | no employer timestamp | excluded |
+
+An age of exactly 24:00:00 is FRESH, not VERY_FRESH. Exactly 720:00:00 is OLD. `run.freshness_hours` remains 24 for previews and `--freshness-hours`. That flag does not widen the daily window.
+
+Rule: use `posted_at` when present; otherwise use `updated_at` if `freshness_use_updated_when_posted_missing` is true; otherwise `UNKNOWN`. An updated timestamp is never rewritten as a posted date. `DISCOVERED_DATE`, `first_seen_at`, and `last_seen_at` are not posting times. A job found today can still be OLD.
+
+`posted_at` and `updated_at` come from the employer. `first_seen_at` is the first workbook or archive day this job was seen. `last_seen_at` is the latest. Seeing a job again does not make it new, and it does not refresh `posted_at`.
+
+### Two discovery modes
+
+1. **Configured company discovery.** `config/companies.yaml` lists companies and, when known, their ATS board. Greenhouse, Lever, Ashby, Workday, and career-page fallback all still run for those companies.
+2. **Bounded public board discovery.** After the configured crawl, the run reads a date-rotated Internet Archive CDX sample. Greenhouse and Ashby samples are path prefixes on `boards.greenhouse.io`, `job-boards.greenhouse.io`, and `jobs.ashbyhq.com`. Workday samples are public `*.wdN.myworkdayjobs.com` and `*.wdN.myworkdaysite.com` career URLs. Workday does not publish a universal jobs API, so the sample is only what that archive page returns. Each Workday URL is accepted only when the public CXS endpoint returns a job-search payload (`appliedFacets` empty, `limit` 20). Those boards then go through the same CXS collector as a configured Workday company, including the 2,000-job cap and the existing `searchText` partitions. A company does not have to be listed in `companies.yaml` to be in the sample. Boards already configured are collected once. The same job found both ways becomes one job.
+
+This is not a Greenhouse, Ashby, or Workday directory. Common Crawl's CDX API is not used, because its robots.txt disallows that path. At most `max_boards_per_run` new boards are fetched per ATS. Coverage is partial. The report says `GLOBAL DISCOVERY: PARTIAL COVERAGE`. It does not say that every Workday job was discovered. If the archive index is down, configured companies still run and the daily job does not fail for that reason alone.
 
 ---
 
@@ -276,7 +297,7 @@ python -m playwright install chromium
 ### Commands
 
 ```bash
-python -m src.main                              # daily production run (24-hour freshness)
+python -m src.main                              # daily production run (tiered freshness)
 python -m src.main --diagnostic                 # coverage + per-company report + funnel; no email
 python -m src.main --source-health              # probe ATS/Jobright/H1BGrader + Workday CXS
 python -m src.main --freshness-hours 72 --diagnostic   # diagnostic only; production stays 24h
@@ -290,7 +311,7 @@ pytest
 
 Smoke commands are dry-runs. They do not write `data/current/jobs.xlsx` or today's archive, and they do not change `workday.browser_enabled` in `config/settings.yaml`. The browser smoke turns the browser on for that process only.
 
-`--freshness-hours 72` is for debugging timestamp yield only. GitHub Actions continues to use the configured 24-hour requirement. Jobs with no posted/updated timestamp stay `UNKNOWN` and are not treated as fresh.
+`--freshness-hours 72` changes the observational preview window only. GitHub Actions uses the freshness tiers in `config/settings.yaml`. Jobs with no posted/updated timestamp stay `UNKNOWN` and are not treated as fresh.
 
 `pyproject.toml` is the authoritative dependency list.
 
@@ -300,7 +321,7 @@ Smoke commands are dry-runs. They do not write `data/current/jobs.xlsx` or today
 
 | File | Purpose |
 | --- | --- |
-| `config/companies.yaml` | Company universe (enabled production registry + disabled Fortune 500) |
+| `config/companies.yaml` | Configured companies and their sources. Not the full Greenhouse/Ashby universe. |
 | `config/ats_registry.yaml` | Static ATS identifiers shipped with the repo. Daily runs do not rewrite it. |
 | `config/settings.yaml` | Freshness, sources, URL policy, visa *interpretation*, LLM, output, email |
 | `config/roles.yaml` | Role families, seniority signals, H-1B role groups |
@@ -317,7 +338,7 @@ Tests are offline. They use fixtures under `tests/fixtures/` and never depend on
 pytest
 ```
 
-Coverage includes core filters, 24-hour freshness, UTC normalisation, experience vs preferred years, equivalent roles, U.S. locations, employment types, job IDs, cross-source and historical dedup, direct URL validation, XLSX quality (hyperlinks, dropdowns, same-day preservation, formula injection), and the full H-1B matrix (explicit yes/no, “must not require sponsorship now or in the future”, historical same-role / unrelated-role / different-location / old vs recent, lookup failure, Gemini schema constraints, and the hard rule that `NOT_SUPPORTED` and `UNKNOWN` jobs remain).
+Coverage includes core filters, freshness tiers, UTC normalisation, experience vs preferred years, equivalent roles, U.S. locations, employment types, job IDs, cross-source and historical dedup, direct URL validation, XLSX quality (hyperlinks, dropdowns, same-day preservation, formula injection), and the full H-1B matrix (explicit yes/no, “must not require sponsorship now or in the future”, historical same-role / unrelated-role / different-location / old vs recent, lookup failure, Gemini schema constraints, and the hard rule that `NOT_SUPPORTED` and `UNKNOWN` jobs remain).
 
 ---
 
@@ -332,7 +353,7 @@ Checkout → Python 3.12 → fresh venv → pip install -e . → Playwright Chro
   → python -m src.main → commit data/current and data/archive if changed → push
 ```
 
-The production command is `python -m src.main`. The workflow does not pass `--dry-run`, `--fixture-mode`, `--diagnostic`, or `--freshness-hours`. Freshness stays at 24 hours.
+The production command is `python -m src.main`. The workflow does not pass `--dry-run`, `--fixture-mode`, `--diagnostic`, or `--freshness-hours`. Daily eligibility uses the freshness tiers in `config/settings.yaml`.
 
 `permissions: contents: write` is the only permission. It lets the job push the tracker. The commit step uses the `github-actions[bot]` identity and runs `git add data/current data/archive`. If that staged diff is empty, it does not commit. It does not add the rest of the tree. `.venv`, `.env`, caches, logs, `*.xlsx.tmp`, and secrets stay untracked.
 
@@ -412,7 +433,7 @@ The daily pipeline uses public job pages and public ATS endpoints.
 
 ## Known limitations
 
-- Workday discovery is partial. The public CXS page size is 20 and a board stops at 2,000 unfiltered jobs. NVIDIA and Booz Allen stay incomplete at that cap even after the existing `searchText` partitions. A 404 tenant is a failure for that tenant, not a reason to guess a new site id. Browser discovery stays off in production.
+- Workday discovery is partial in two ways. Configured boards still use the public CXS collector: page size 20, and an unfiltered board stops near 2,000 jobs. NVIDIA and Booz Allen stay incomplete at that cap even after the existing `searchText` partitions. Global discovery adds a bounded archive sample of other public career hosts. That sample is not every Workday customer. A discovered board that hits the cap stays partial. A 404 tenant is a failure for that tenant, not a reason to guess a new site id. Browser discovery stays off in production.
 - Career-page fallback is partial. Some companies fail, some pages are unsupported or blocked, and many rows have no timestamp. A company that returns zero jobs without an error, such as AMD's current career result, is an empty success. iCIMS is not a production collector.
 - Jobright is disabled in production. Its listing pages are JS-heavy and detail pages have returned 403. The workflow does not enable it.
 - Greenhouse, Lever, and Ashby cover only companies with a verified public board id.
