@@ -8,6 +8,20 @@ from src.services.xlsx import ALL_COLUMNS, BASE_COLUMNS, sanitize_cell, write_wo
 from tests.conftest import make_job
 
 
+def test_failed_workbook_write_preserves_the_current_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    current = tmp_path / "jobs.xlsx"
+    current.write_bytes(b"original-workbook")
+
+    def boom(_path, _rows) -> None:
+        raise OSError("disk full")
+
+    monkeypatch.setattr("src.services.xlsx._write_sheet", boom)
+    with pytest.raises(OSError, match="disk full"):
+        write_workbooks([make_job()], current_path=current, archive_dir=tmp_path / "archive")
+    assert current.read_bytes() == b"original-workbook"
+    assert not (tmp_path / "archive").exists() or not any((tmp_path / "archive").glob("*.xlsx"))
+
+
 def test_column_order() -> None:
     assert BASE_COLUMNS[:16] == (
         "Company",

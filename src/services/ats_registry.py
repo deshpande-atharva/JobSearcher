@@ -131,6 +131,13 @@ class AtsRegistry:
         existing = self._entries.get(key)
         if existing and existing.verified:
             return
+        careers = careers_url or ""
+        if (
+            existing
+            and existing.discovery_method == "failed"
+            and (existing.careers_url or "") == careers
+        ):
+            return
         self._entries[key] = AtsRegistryEntry(
             ats_type=None,
             ats_identifier=None,

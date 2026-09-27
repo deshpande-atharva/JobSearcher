@@ -52,6 +52,7 @@ class CompanyOutcome(BaseModel):
     ats_identifier: str | None = None
     detection_method: str | None = None
     fallback_used: bool = False
+    started_monotonic: float | None = None
     status: str = ""
     http_status: int | None = None
     fallback_status: str | None = None
@@ -89,6 +90,8 @@ class RejectedJob(BaseModel):
     date_source: DateSource | None = None
     age_hours: float | None = None
     experience_category: str | None = None
+    report_code: str | None = None
+    semantic_family: str | None = None
 
 
 class RunSummary(BaseModel):
@@ -113,6 +116,8 @@ class RunSummary(BaseModel):
     jobs_after_cross_source_dedup: int = 0
     jobs_processed: int = 0
     jobs_truncated: int = 0
+    # Sums of per-company durations (they overlap) plus HTTP/browser counters.
+    discovery_profile: dict[str, Any] = Field(default_factory=dict)
     jobs_extracted: int = 0
     jobs_accepted: int = 0
     unknown_timestamps: int = 0
@@ -155,10 +160,46 @@ class RunSummary(BaseModel):
     llm_calls: int = 0
     llm_failures: int = 0
     llm_enabled: bool = False
+    llm_successes: int = 0
+    llm_retries: int = 0
+    llm_fallbacks: int = 0
+    llm_deterministic_avoided: int = 0
+    llm_circuit_skips: int = 0
+    llm_circuit_state: str = "CLOSED"
+    llm_state_before: str = "CLOSED"
+    llm_state_after: str = "CLOSED"
+    llm_by_purpose: dict[str, int] = Field(default_factory=dict)
+    semantic_review_required: int = 0
+    semantic_review_attempted: int = 0
+    semantic_review_accepted: int = 0
+    semantic_review_rejected: int = 0
+    semantic_review_uncertain: int = 0
+    semantic_review_unavailable: int = 0
+    semantic_reviews_blocked_by_circuit: int = 0
+    semantic_by_family: dict[str, dict[str, int]] = Field(default_factory=dict)
+    deterministic_accepts: int = 0
+    deterministic_rejects: int = 0
+    fresh_semantic_review_required: int = 0
+    fresh_semantic_review_attempted: int = 0
+    fresh_semantic_review_accepted: int = 0
+    fresh_semantic_review_rejected: int = 0
+    fresh_semantic_review_uncertain: int = 0
+    fresh_semantic_review_unavailable: int = 0
+    fresh_authoritative_jobs: int = 0
+    email_skipped: bool = False
+    email_failed: bool = False
+    email_reason: str = ""
+    intelligence_evaluated: int = 0
+    critic_reviewed: int = 0
+    unsupported_claims_removed: int = 0
+    stage_seconds: dict[str, float] = Field(default_factory=dict)
 
     # --- output -------------------------------------------------------------
     workbook_path: str | None = None
     archive_path: str | None = None
+    xlsx_status: str = "not_written"
+    archive_status: str = "not_written"
+    exit_code: int | None = None
     email_status: str = "not attempted"
     warnings: list[str] = Field(default_factory=list)
 
@@ -263,6 +304,10 @@ class RunSummary(BaseModel):
             f"Email                : {self.email_status}",
             f"LLM calls / failures : {self.llm_calls} / {self.llm_failures}"
             + ("" if self.llm_enabled else "  (LLM disabled)"),
+            f"LLM successes/retries: {self.llm_successes} / {self.llm_retries}",
+            f"LLM avoided/skips    : {self.llm_deterministic_avoided} / {self.llm_circuit_skips}",
+            f"LLM fallbacks/state  : {self.llm_fallbacks} / {self.llm_circuit_state}",
+            f"LLM by purpose       : {self.llm_by_purpose or {}}",
         ]
         lines += ["", self.discovery_health_report(), "", self.source_summary_report(), "", self.filter_funnel()]
         coverage = self.coverage_report()
@@ -271,6 +316,9 @@ class RunSummary(BaseModel):
         freshness = self.freshness_source_report()
         if freshness:
             lines += ["", freshness]
+        preview = self.fresh_preview_report()
+        if preview:
+            lines += ["", preview]
         breakdown = self.freshness_candidate_report()
         if breakdown:
             lines += ["", breakdown]
@@ -358,7 +406,11 @@ class RunSummary(BaseModel):
     def remaining_after(self, *reasons: str) -> int:
         start = self.jobs_extracted
         mapping = {
-            "role": self.rejected_by_role,
+            "role": (
+                self.rejected_by_role
+                + self.semantic_review_unavailable
+                + self.semantic_review_uncertain
+            ),
             "seniority": self.rejected_by_seniority,
             "location": self.rejected_by_location,
             "employment": self.rejected_by_employment_type,
@@ -420,6 +472,8 @@ class RunSummary(BaseModel):
             f"- {max(raw - deduped, 0)} cross-source duplicates",
             f"- {self.jobs_truncated} truncated by max_jobs_per_run",
             f"- {self.rejected_by_role} non-target roles",
+            f"- {self.semantic_review_unavailable} semantic review unavailable",
+            f"- {self.semantic_review_uncertain} semantic review uncertain",
             f"- {self.rejected_by_seniority} seniority mismatch",
             f"- {self.rejected_by_location} non-US / international",
             f"- {self.rejected_by_employment_type} employment mismatch",
@@ -579,6 +633,53 @@ class RunSummary(BaseModel):
 
         return render_coverage(self.coverage)
 
+    def fresh_preview_report(self) -> str:
+        """Timestamp-fresh postings and the gate that removed each one.
+
+        Diagnostic only. Titles are included; descriptions are not.
+        """
+        audit = (self.discovery_profile or {}).get("fresh_preview_audit") or {}
+        if not audit:
+            return ""
+        funnel = audit.get("funnel") or {}
+        lines = [
+            "FRESH PREVIEW AUDIT",
+            "===================",
+            "(authoritative timestamps only; this does not change qualification)",
+            f"fresh preview: {funnel.get('fresh_preview', audit.get('count', 0))}",
+            f"fresh after role: {funnel.get('fresh_after_role', 0)}",
+            f"fresh after seniority: {funnel.get('fresh_after_seniority', 0)}",
+            f"fresh after location: {funnel.get('fresh_after_location', 0)}",
+            f"fresh after employment: {funnel.get('fresh_after_employment', 0)}",
+            f"freshness gate: {funnel.get('freshness_gate', 0)}",
+        ]
+        reasons = audit.get("by_pipeline_reason") or {}
+        if reasons:
+            lines.append(
+                "pipeline reasons: "
+                + " ".join(f"{key}={reasons[key]}" for key in sorted(reasons))
+            )
+        for row in audit.get("jobs") or []:
+            lines.append(
+                f"{row.get('company') or '-'} | {row.get('source') or '-'} | "
+                f"{row.get('job_id') or '-'} | {row.get('title') or '-'}"
+            )
+            lines.append(
+                f"  timestamp: {row.get('timestamp_source') or '-'} "
+                f"{row.get('authoritative_timestamp') or '-'} age={row.get('age_hours')}"
+            )
+            lines.append(f"  location: {row.get('location') or '-'}")
+            lines.append(
+                f"  role={'pass' if row.get('role_pass') else 'reject'} "
+                f"seniority={'pass' if row.get('seniority_pass') else 'reject'} "
+                f"location={'pass' if row.get('location_pass') else 'reject'} "
+                f"employment={'pass' if row.get('employment_pass') else 'reject'}"
+            )
+            lines.append(f"  pipeline: {row.get('pipeline_reason') or 'none'}")
+            if row.get("pipeline_detail"):
+                lines.append(f"  detail: {row.get('pipeline_detail')}")
+        return "\n".join(lines)
+
     def freshness_source_report(self) -> str:
         if not self.freshness_by_source:
             return ""
@@ -660,8 +761,15 @@ class PipelineState(BaseModel):
         job: Job,
         reason: RejectionReason,
         detail: str | None = None,
+        *,
+        report_code: str | None = None,
+        semantic_family: str | None = None,
     ) -> None:
-        """Record a rejection and update the matching summary counter."""
+        """Record a rejection and update the matching summary counter.
+
+        Semantic-review holds leave the candidate set without counting as a
+        definitive role mismatch.
+        """
         self.rejected.append(
             RejectedJob(
                 company=job.company,
@@ -671,8 +779,12 @@ class PipelineState(BaseModel):
                 url=job.direct_application_url,
                 source=job.source,
                 date_source=job.date_source,
+                report_code=report_code,
+                semantic_family=semantic_family,
             )
         )
+        if report_code in {"SEMANTIC_REVIEW_UNAVAILABLE", "SEMANTIC_REVIEW_UNCERTAIN"}:
+            return
         self.summary.count_rejection(reason)
 
 

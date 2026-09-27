@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
+import time
+
 from src.models.job import (
     ACCEPTED_EMPLOYMENT_TYPES,
     DecisionSource,
     EmploymentType,
     JobDecision,
-    RemoteType,
     RejectionReason,
+    RemoteType,
 )
 from src.models.state import PipelineState
 from src.utils.logging import get_logger
@@ -21,8 +23,11 @@ async def run_location_employment(state: PipelineState) -> None:
     require_us = state.config.settings.filters.require_us_location
     allowed = set(state.config.settings.filters.employment_types) or set(ACCEPTED_EMPLOYMENT_TYPES)
     kept = []
+    location_seconds = 0.0
+    employment_seconds = 0.0
 
     for job in state.jobs:
+        started = time.perf_counter()
         loc = normalize_location(job.location, description=job.description)
         job.location_city = loc.city
         job.location_state = loc.state
@@ -31,20 +36,20 @@ async def run_location_employment(state: PipelineState) -> None:
         if loc.display and loc.display != "Unknown":
             job.location = loc.display
 
+        location_rejected = False
         if loc.is_international_only:
             state.reject(job, RejectionReason.LOCATION, f"international-only location: {job.location}")
+            location_rejected = True
+        else:
+            us_ok = loc.is_us
+            if require_us and not us_ok:
+                state.reject(job, RejectionReason.LOCATION, f"could not confirm a U.S. location: {job.location}")
+                location_rejected = True
+        location_seconds += time.perf_counter() - started
+        if location_rejected:
             continue
 
-        us_ok = loc.is_us
-        if not us_ok and job.remote_type is RemoteType.REMOTE and not loc.is_international_only:
-            # Bare remote with no foreign country token, from a U.S.-targeted search.
-            us_ok = True
-            if job.location in {"", "Unknown"}:
-                job.location = "Remote"
-        if require_us and not us_ok:
-            state.reject(job, RejectionReason.LOCATION, f"could not confirm a U.S. location: {job.location}")
-            continue
-
+        started = time.perf_counter()
         if job.employment_type is EmploymentType.UNKNOWN:
             job.employment_type = detect_employment_type(
                 None, title=job.job_title, description=job.description
@@ -58,11 +63,15 @@ async def run_location_employment(state: PipelineState) -> None:
                 RejectionReason.EMPLOYMENT_TYPE,
                 f"employment type {job.employment_type.value} is outside the target profile",
             )
+            employment_seconds += time.perf_counter() - started
             continue
 
         job.record(JobDecision(agent="location", passed=True, decided_by=DecisionSource.DETERMINISTIC))
         kept.append(job)
+        employment_seconds += time.perf_counter() - started
 
+    state.summary.stage_seconds["location_gate"] = round(location_seconds, 3)
+    state.summary.stage_seconds["employment_gate"] = round(employment_seconds, 3)
     state.jobs = kept
     log.info(
         "location/employment complete",

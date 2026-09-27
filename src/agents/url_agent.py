@@ -34,6 +34,8 @@ async def run_url_verification(state: PipelineState) -> None:
             state.reject(job, RejectionReason.INVALID_URL, check.reason)
             continue
         job.direct_application_url = check.url
+        job.url_reachable = check.reachable
+        job.url_verified = check.reachable is True
         if check.job_id and not job.job_id:
             job.job_id = check.job_id
         job.record(

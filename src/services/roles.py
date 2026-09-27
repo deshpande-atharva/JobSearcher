@@ -7,13 +7,30 @@ the job is software engineering.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 
 from src.models.config import RolesConfig
 from src.models.job import DecisionSource
 from src.utils.normalization import normalize_title
 
-__all__ = ["RoleVerdict", "classify_role"]
+# People-management titles are not individual-contributor software roles, even
+# when "software engineer" is also in the title.
+_MANAGEMENT_TITLE = re.compile(
+    r"\b(?:manager|director|vice president|\bvp\b|head of|solutions architect|enterprise architect)\b",
+    re.IGNORECASE,
+)
+
+__all__ = ["REPORT_FAMILIES", "RoleVerdict", "classify_role", "semantic_family"]
+
+REPORT_FAMILIES: tuple[str, ...] = (
+    "AI_ENGINEER",
+    "ML_ENGINEER",
+    "DATA_ENGINEER",
+    "ANALYTICS_ENGINEER",
+    "QA_AUTOMATION_ENGINEER",
+    "OTHER_AMBIGUOUS",
+)
 
 
 @dataclass(slots=True)
@@ -28,6 +45,15 @@ class RoleVerdict:
     work_signals: list[str] = field(default_factory=list)
     detail: str = ""
 
+    @property
+    def classification_state(self) -> str:
+        """Internal qualification state. Semantic review is not a rejection."""
+        if self.needs_llm:
+            return "SEMANTIC_REVIEW_REQUIRED"
+        if self.is_software_engineering:
+            return "DETERMINISTIC_ACCEPT"
+        return "DETERMINISTIC_REJECT"
+
 
 def classify_role(
     title: str | None,
@@ -36,6 +62,14 @@ def classify_role(
 ) -> RoleVerdict:
     """Classify a posting from title + description without calling an LLM."""
     normalized = normalize_title(title)
+    if _MANAGEMENT_TITLE.search(normalized):
+        return RoleVerdict(
+            is_software_engineering=False,
+            family="NOT_SOFTWARE",
+            label="Not Software Engineering",
+            confidence=0.9,
+            detail="management title is outside the software-engineering target",
+        )
     blob = f"{normalized}\n{(description or '').lower()}"
 
     excluded = [term for term in roles.excluded_title_terms if term and term in normalized]
@@ -121,3 +155,19 @@ def classify_role(
         confidence=0.7,
         detail="no software-engineering title or work signals",
     )
+
+
+def semantic_family(verdict: RoleVerdict) -> str:
+    """Report bucket for a semantic-review title. Taxonomy families stay unchanged."""
+    keyword = verdict.matched_keywords[0].lower() if verdict.matched_keywords else ""
+    if "analytics engineer" in keyword:
+        return "ANALYTICS_ENGINEER"
+    if keyword == "ai engineer" or keyword.startswith("ai "):
+        return "AI_ENGINEER"
+    if verdict.family == "MACHINE_LEARNING_ENGINEER":
+        return "ML_ENGINEER"
+    if verdict.family == "DATA_ENGINEER":
+        return "DATA_ENGINEER"
+    if verdict.family == "QA_AUTOMATION_ENGINEER":
+        return "QA_AUTOMATION_ENGINEER"
+    return "OTHER_AMBIGUOUS"

@@ -28,10 +28,12 @@ Set fits_entry_level to true when any of these hold:
 entry level, early career, junior, apprentice, intern or co-op candidates
 - no professional experience is required at all
 
+A Senior, Staff, Lead, or similar title does not fail on its own when the \
+required experience is 2 years or fewer, or the posting is explicitly new-grad \
+or entry level.
+
 Set fits_entry_level to false when:
 - required experience is clearly 3 or more years
-- the role is Senior, Staff, Principal, Lead, Manager, Director, Head of, \
-Architect, or otherwise above the entry band, even if no years are stated
 
 When multiple alternative requirements are offered (for example "2 years with a \
 Bachelor's, or none with a Master's"), use the LOWEST required amount, since a \

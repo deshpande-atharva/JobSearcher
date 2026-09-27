@@ -60,6 +60,86 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--log-level", default=None, help="DEBUG, INFO, WARNING, ERROR.")
     parser.add_argument("--log-format", choices=("text", "json"), default=None)
+    parser.add_argument(
+        "--greenhouse-smoke-test",
+        action="store_true",
+        help="Live Greenhouse check only. Not part of pytest or the daily pipeline.",
+    )
+    parser.add_argument(
+        "--greenhouse-browser-smoke-test",
+        action="store_true",
+        help="Open a public Greenhouse career page in Playwright and discover jobs from the UI.",
+    )
+    parser.add_argument(
+        "--greenhouse-phase3",
+        action="store_true",
+        help="Score browser-discovered Greenhouse jobs against the resume profile.",
+    )
+    parser.add_argument(
+        "--resume-smoke-test",
+        action="store_true",
+        help="Read data/candidate/resume.pdf and write a versioned candidate profile.",
+    )
+    parser.add_argument(
+        "--workday-browser-smoke-test",
+        action="store_true",
+        help="Open one public Workday career site in Playwright and discover jobs from the UI.",
+    )
+    parser.add_argument(
+        "--workday-intelligence-smoke-test",
+        action="store_true",
+        help="Open a few public Workday job pages and score them with the existing intelligence agents.",
+    )
+    parser.add_argument(
+        "--workday-production-smoke-test",
+        action="store_true",
+        help="Target-oriented Workday discovery through the existing qualification path. Does not write the production workbook.",
+    )
+    parser.add_argument(
+        "--workday-live-e2e-smoke-test",
+        action="store_true",
+        help="Replay NVIDIA keyword search, then run surviving jobs through the existing qualification chain. Does not write the production workbook.",
+    )
+    parser.add_argument(
+        "--multi-source-smoke-test",
+        action="store_true",
+        help="Run Greenhouse and Workday through one qualification path. Does not write the production workbook or enable browser discovery.",
+    )
+    parser.add_argument(
+        "--sources",
+        default=None,
+        help="Comma-separated sources for the multi-source smokes. Default: greenhouse,workday.",
+    )
+    parser.add_argument(
+        "--lever-smoke-test",
+        action="store_true",
+        help="Public Lever board smoke. Dry-run. Does not write the production workbook.",
+    )
+    parser.add_argument(
+        "--ashby-smoke-test",
+        action="store_true",
+        help="Public Ashby board smoke. Dry-run. Does not write the production workbook.",
+    )
+    parser.add_argument(
+        "--jobright-smoke-test",
+        action="store_true",
+        help="Public Jobright discovery smoke. Dry-run. Does not write the production workbook.",
+    )
+    parser.add_argument(
+        "--multi-source-browser-smoke-test",
+        action="store_true",
+        help="Greenhouse API plus NVIDIA Workday browser discovery. Does not change production config or navigation files.",
+    )
+    parser.add_argument(
+        "--live-downstream-smoke-test",
+        action="store_true",
+        help="Score one real Workday job downstream. A stale job stays unqualified for production.",
+    )
+    parser.add_argument(
+        "--source",
+        default=None,
+        help="Source for --live-downstream-smoke-test. Default: workday. Ignored by the daily pipeline.",
+    )
     return parser
 
 
@@ -99,6 +179,86 @@ async def async_main(argv: list[str] | None = None) -> int:
         print()
         return 0
 
+    if args.greenhouse_smoke_test:
+        from src.pilot.smoke import run_greenhouse_smoke
+
+        return await run_greenhouse_smoke(config)
+
+    if args.greenhouse_browser_smoke_test:
+        from src.pilot.browser_discovery import run_browser_smoke
+
+        return await run_browser_smoke(config)
+
+    if args.resume_smoke_test:
+        from src.pilot.resume_smoke import run_resume_smoke
+
+        return await run_resume_smoke(config)
+
+    if args.greenhouse_phase3:
+        from src.pilot.phase3 import run_phase3
+
+        return await run_phase3(config)
+
+    if args.workday_browser_smoke_test:
+        from src.pilot.workday_browser import run_workday_browser_smoke
+
+        return await run_workday_browser_smoke(config)
+
+    if args.workday_intelligence_smoke_test:
+        from src.pilot.workday_intelligence import run_workday_intelligence_smoke
+
+        return await run_workday_intelligence_smoke(config)
+
+    if args.workday_production_smoke_test:
+        from src.pilot.workday_production import run_workday_production_smoke
+
+        return await run_workday_production_smoke(config)
+
+    if args.workday_live_e2e_smoke_test:
+        from src.pilot.workday_production import run_workday_live_e2e
+
+        return await run_workday_live_e2e(config)
+
+    if args.lever_smoke_test:
+        from src.services.discovery_orchestrator import run_lever_smoke
+
+        return await run_lever_smoke(config)
+
+    if args.ashby_smoke_test:
+        from src.services.discovery_orchestrator import run_ashby_smoke
+
+        return await run_ashby_smoke(config)
+
+    if args.jobright_smoke_test:
+        from src.services.discovery_orchestrator import run_jobright_smoke
+
+        return await run_jobright_smoke(config)
+
+    if args.multi_source_smoke_test:
+        from src.services.discovery_orchestrator import ORCHESTRATED_SOURCES, run_multi_source_smoke
+
+        selected = tuple(
+            part.strip().lower()
+            for part in (args.sources or "greenhouse,workday").split(",")
+            if part.strip()
+        ) or ORCHESTRATED_SOURCES
+        return await run_multi_source_smoke(config, sources=selected)
+
+    if args.multi_source_browser_smoke_test:
+        from src.services.orchestration_smoke import run_multi_source_browser_smoke
+
+        selected = tuple(
+            part.strip().lower()
+            for part in (args.sources or "greenhouse,workday").split(",")
+            if part.strip()
+        ) or ("greenhouse", "workday")
+        return await run_multi_source_browser_smoke(config, sources=selected)
+
+    if args.live_downstream_smoke_test:
+        from src.services.orchestration_smoke import run_live_downstream_smoke
+
+        return await run_live_downstream_smoke(config, source=(args.source or "workday").strip().lower())
+
     from src.graph.pipeline import run_pipeline
 
     try:
@@ -109,6 +269,10 @@ async def async_main(argv: list[str] | None = None) -> int:
 
     print()
     print(state.summary.render())
+    from src.services.production_report import render_pipeline_health
+
+    print()
+    print(render_pipeline_health(state))
     if config.company_filter:
         print()
         print(_company_diagnostic(state, config.company_filter))

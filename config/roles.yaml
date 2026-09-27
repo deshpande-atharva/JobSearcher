@@ -228,6 +228,7 @@ excluded_title_terms:
   - marketing
   - nurse
   - attorney
+  - counsel
   - accountant
 
 # Signals in a description that indicate genuine software engineering work.
@@ -295,6 +296,8 @@ seniority:
     - new grad
     - new graduate
     - new graduates
+    - new college grad
+    - new college graduate
     - recent graduate
     - recent graduates
     - university graduate

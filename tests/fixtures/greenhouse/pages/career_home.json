@@ -1,0 +1,12 @@
+{
+  "id": "career_home",
+  "url": "https://boards.greenhouse.io/acme",
+  "title": "Acme Careers",
+  "visible_text": "View Jobs",
+  "buttons": [{"id": "btn_view", "text": "View Jobs", "role": "button"}],
+  "links": [],
+  "inputs": [{"id": "in_search", "text": "Search", "role": "textbox"}],
+  "selects": [{"id": "sel_dept", "text": "Department", "role": "combobox", "options": ["Engineering"]}],
+  "job_cards": [],
+  "transitions": {"btn_view": "job_listing"}
+}

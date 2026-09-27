@@ -8,12 +8,14 @@ Preferred order (H-1B runs *after* eligibility filters, and never filters):
 
 from __future__ import annotations
 
+import time
 from typing import Any, Awaitable, Callable, TypedDict
 
 from src.agents.dedup_agent import run_dedup
 from src.agents.discovery_agent import run_discovery
 from src.agents.extraction_agent import run_extraction
 from src.agents.freshness_agent import run_freshness
+from src.agents.intelligence_agent import run_job_intelligence
 from src.agents.h1b_sponsorship_agent import run_h1b_enrichment
 from src.agents.location_agent import run_location_employment
 from src.agents.output_agent import run_output
@@ -43,7 +45,9 @@ def _node(fn: AgentFn) -> Callable[[GraphState], Awaitable[GraphState]]:
     async def wrapped(state: GraphState) -> GraphState:
         pipeline = state["pipeline"]
         log.info("agent start", agent=fn.__name__)
+        started = time.perf_counter()
         await fn(pipeline)
+        pipeline.summary.stage_seconds[fn.__name__] = round(time.perf_counter() - started, 3)
         return {"pipeline": pipeline}
 
     wrapped.__name__ = fn.__name__
@@ -65,6 +69,7 @@ def build_graph() -> Any:
     graph.add_node("h1b", _node(run_h1b_enrichment))
     graph.add_node("dedup", _node(run_dedup))
     graph.add_node("qc", _node(run_quality_control))
+    graph.add_node("intelligence", _node(run_job_intelligence))
     graph.add_node("output", _node(run_output))
 
     graph.add_edge(START, "discovery")
@@ -77,7 +82,8 @@ def build_graph() -> Any:
     graph.add_edge("url", "h1b")
     graph.add_edge("h1b", "dedup")
     graph.add_edge("dedup", "qc")
-    graph.add_edge("qc", "output")
+    graph.add_edge("qc", "intelligence")
+    graph.add_edge("intelligence", "output")
     graph.add_edge("output", END)
     return graph.compile()
 
@@ -125,8 +131,17 @@ async def run_pipeline(config: AppConfig, *, resources: dict[str, Any] | None = 
     if finished.summary.run_finished_at is None:
         finished.summary.run_finished_at = utcnow()
     if isinstance(llm, LLMProvider):
-        finished.summary.llm_calls = llm.stats.calls
-        finished.summary.llm_failures = llm.stats.failures
+        stats = llm.stats
+        finished.summary.llm_calls = stats.calls
+        finished.summary.llm_failures = stats.failures
+        finished.summary.llm_successes = stats.successes
+        finished.summary.llm_retries = stats.retries
+        finished.summary.llm_fallbacks = stats.fallbacks
+        finished.summary.llm_deterministic_avoided = stats.deterministic_avoided
+        finished.summary.llm_circuit_skips = stats.skipped_circuit_open
+        finished.summary.llm_circuit_state = stats.circuit_state or "CLOSED"
+        finished.summary.llm_state_after = finished.summary.llm_circuit_state
+        finished.summary.llm_by_purpose = dict(stats.by_purpose)
     from src.services.discovery_report import attach_discovery_reports
 
     finished.summary.freshness_hours_used = finished.config.freshness_hours
@@ -135,6 +150,10 @@ async def run_pipeline(config: AppConfig, *, resources: dict[str, Any] | None = 
             finished.summary.jobs_after_cross_source_dedup or finished.summary.jobs_discovered
         )
     attach_discovery_reports(finished)
+    from src.services.fresh_preview import attach_fresh_preview
+
+    attach_fresh_preview(finished)
+    finished.summary.exit_code = 0
     return finished
 
 

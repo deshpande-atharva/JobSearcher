@@ -47,6 +47,7 @@ async def run_extraction(state: PipelineState) -> None:
                     reason=RejectionReason.EXTRACTION_FAILED,
                     detail="missing company, title or application URL",
                     url=posting.apply_url,
+                    source=posting.source,
                 )
             )
             state.summary.count_rejection(RejectionReason.EXTRACTION_FAILED)
@@ -118,6 +119,15 @@ def _to_job(raw: RawJobPosting) -> Job | None:
         raw.employment_type_raw, title=raw.title, description=raw.description
     )
     job_id = raw.job_id or extract_job_id(url)
+    provenance = dict(raw.provenance)
+    discovered = [str(item) for item in provenance.get("discovered_from") or [] if item]
+    if raw.source and raw.source not in discovered:
+        discovered.insert(0, raw.source)
+    provenance["discovered_from"] = discovered
+    provenance.setdefault("source_url", url)
+    provenance.setdefault("source_job_id", str(job_id) if job_id else "")
+    if raw.discovered_at is not None and not provenance.get("discovered_at"):
+        provenance["discovered_at"] = raw.discovered_at.isoformat()
 
     posted_at = raw.posted_at
     updated_at = raw.updated_at
@@ -143,7 +153,10 @@ def _to_job(raw: RawJobPosting) -> Job | None:
         job_id=str(job_id) if job_id else None,
         source=raw.source,
         direct_application_url=url,
-        discovery_url=url,
+        discovery_url=str(provenance.get("source_url") or url),
+        discovery_method=str(provenance.get("discovery_method") or ""),
+        additional_sources=[name for name in discovered if name != raw.source],
+        provenance=provenance,
         description=raw.description,
     )
     job.record(

@@ -6,16 +6,13 @@ on their own. Ambiguous postings are flagged for the LLM.
 
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass, field
 
 from src.models.config import RolesConfig
 from src.models.job import DecisionSource
-from src.utils.normalization import ExperienceRequirement, extract_experience_requirement, normalize_title
+from src.utils.normalization import ExperienceRequirement, extract_experience_requirement
 
 __all__ = ["SeniorityVerdict", "classify_seniority"]
-
-_TITLE_WORD_RE = re.compile(r"[^a-z0-9+]+")
 
 
 @dataclass(slots=True)
@@ -31,24 +28,6 @@ class SeniorityVerdict:
     signals: list[str] = field(default_factory=list)
 
 
-def _title_has_reject_signal(normalized_title: str, signals: tuple[str, ...] | list[str]) -> str | None:
-    """Return the first reject signal that qualifies the *role*, not a random substring.
-
-    ``lead`` must not reject ``lead generation intern``. ``senior`` must not
-    reject a sentence in the description -- this function only sees the title.
-    """
-    padded = f" {normalized_title} "
-    for signal in signals:
-        token = signal.lower().strip()
-        if not token:
-            continue
-        if f" {token} " in padded or normalized_title.startswith(token + " ") or normalized_title.endswith(" " + token):
-            return token
-        if token in normalized_title and " " in token:
-            return token
-    return None
-
-
 def classify_seniority(
     title: str | None,
     description: str | None,
@@ -59,16 +38,6 @@ def classify_seniority(
 ) -> SeniorityVerdict:
     """Decide whether required experience fits the 0-2 / new-grad band."""
     cap = roles.seniority.max_required_years if max_required_years is None else max_required_years
-    normalized = normalize_title(title)
-    reject_hit = _title_has_reject_signal(normalized, roles.seniority.reject_title_signals)
-    if reject_hit:
-        return SeniorityVerdict(
-            fits_entry_level=False,
-            confidence=0.93,
-            detail=f"title seniority signal: {reject_hit}",
-            signals=[reject_hit],
-        )
-
     parsed: ExperienceRequirement = extract_experience_requirement(
         description,
         title=title,
@@ -109,7 +78,7 @@ def classify_seniority(
             preferred_min_years=parsed.preferred_min_years,
             confidence=0.88,
             detail=f"required experience {parsed.min_years}+ years fits the target band{preferred_note}",
-            signals=parsed.required_quotes + parsed.entry_level_signals,
+            signals=parsed.required_quotes,
         )
 
     if parsed.entry_level_signals:

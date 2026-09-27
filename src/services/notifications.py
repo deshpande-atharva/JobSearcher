@@ -15,7 +15,7 @@ from src.models.config import AppConfig, Secrets
 from src.models.state import RunSummary
 from src.utils.logging import get_logger, redact
 
-__all__ = ["build_email_body", "email_configured", "send_run_summary"]
+__all__ = ["build_email_body", "build_email_subject", "email_configured", "send_run_summary"]
 
 log = get_logger(__name__)
 
@@ -24,14 +24,51 @@ def email_configured(secrets: Secrets) -> bool:
     return secrets.smtp_configured
 
 
+def _source_health_lines(summary: RunSummary) -> list[str]:
+    if not summary.source_health:
+        return []
+    from src.services.production_report import production_source_state
+
+    lines = ["Source health:"]
+    for name in sorted(summary.source_health):
+        health = summary.source_health[name]
+        lines.append(
+            f"- {name}: {production_source_state(health)} "
+            f"jobs={health.jobs_discovered} company_failures={health.failed}"
+        )
+    return lines
+
+
+def build_email_subject(summary: RunSummary, prefix: str = "[job-agent]") -> str:
+    from src.utils.dates import utcnow
+
+    when = summary.run_finished_at or summary.run_started_at or utcnow()
+    date = when.strftime("%Y-%m-%d")
+    return f"{prefix} {date} status=completed final={summary.jobs_accepted}"
+
+
 def build_email_body(summary: RunSummary, jobs: list[Any] | None = None) -> str:
-    """Concise notification. Never the full workbook or the diagnostic report."""
+    """Concise notification. Titles only. No descriptions, resume text, or secrets."""
     from src.utils.dates import utcnow
 
     when = summary.run_finished_at or utcnow()
     date = when.strftime("%Y-%m-%d")
     final = summary.jobs_accepted
-    lines = [f"Daily Job Discovery — {date}", f"Final jobs: {final}"]
+    runtime = summary.duration_seconds
+    runtime_text = "n/a" if runtime is None else f"{runtime:.1f}s"
+    lines = [
+        f"Daily Job Discovery — {date}",
+        "Status: completed",
+        f"Final jobs: {final}",
+        f"Discovered jobs: {summary.jobs_discovered}",
+        f"Fresh jobs: {summary.fresh_authoritative_jobs}",
+        f"Final candidates: {final}",
+        f"Runtime: {runtime_text}",
+        f"LLM state: {summary.llm_state_after or summary.llm_circuit_state}",
+    ]
+    lines.extend(_source_health_lines(summary))
+    if summary.failed_sources:
+        lines.append("Failed sources: " + ", ".join(summary.failed_sources))
     if final == 0:
         lines.extend(
             [
@@ -42,16 +79,7 @@ def build_email_body(summary: RunSummary, jobs: list[Any] | None = None) -> str:
         )
         return "\n".join(lines)
 
-    fresh = summary.remaining_after("role", "seniority", "location", "employment", "freshness")
-    lines.extend(
-        [
-            f"Companies scanned: {summary.companies_attempted}",
-            f"Jobs discovered: {summary.jobs_discovered}",
-            f"Deduplicated: {summary.jobs_after_cross_source_dedup}",
-            f"Fresh <{summary.freshness_hours_used:g}h: {fresh}",
-            "New jobs:",
-        ]
-    )
+    lines.append("New jobs:")
     new_jobs = [job for job in (jobs or []) if getattr(job, "is_new", True)]
     if not new_jobs:
         lines.append("• (none)")
@@ -75,22 +103,18 @@ def send_run_summary(config: AppConfig, summary: RunSummary, jobs: list[Any] | N
     if not secrets.smtp_configured:
         missing = ", ".join(secrets.missing_smtp_fields())
         log.warning("WARNING: email notifications disabled", missing=missing)
-        return f"skipped (missing {missing})"
+        return "skipped (SMTP_NOT_CONFIGURED)"
 
-    prefix = config.settings.notifications.subject_prefix
-    accepted = summary.jobs_accepted
-    subject = f"{prefix} {accepted} accepted · {summary.new_jobs} new · {summary.companies_failed} companies failed"
-
-    body = build_email_body(summary, jobs)
-    message = EmailMessage()
-    message["Subject"] = subject
-    message["From"] = secrets.notification_from or secrets.smtp_username or ""
-    message["To"] = secrets.notification_email or ""
-    message.set_content(body)
-
+    subject = build_email_subject(summary, config.settings.notifications.subject_prefix)
     port = secrets.smtp_port or 587
     host = secrets.smtp_host or ""
     try:
+        body = build_email_body(summary, jobs)
+        message = EmailMessage()
+        message["Subject"] = subject
+        message["From"] = secrets.notification_from or secrets.smtp_username or ""
+        message["To"] = secrets.notification_email or ""
+        message.set_content(body)
         with smtplib.SMTP(host, port, timeout=30) as smtp:
             smtp.ehlo()
             if port != 25:

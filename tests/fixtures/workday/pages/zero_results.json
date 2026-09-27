@@ -1,0 +1,12 @@
+{
+  "id": "zero_results",
+  "url": "https://nvidia.wd5.myworkdayjobs.com/en-US/NVIDIAExternalCareerSite?q=zzzz",
+  "title": "NVIDIA Jobs",
+  "visible_text": "No jobs found",
+  "buttons": [{"id": "btn_search", "text": "Search Jobs", "role": "button"}],
+  "links": [],
+  "inputs": [{"id": "in_search", "text": "Search for jobs", "role": "textbox", "value": "zzzz"}],
+  "selects": [],
+  "job_cards": [],
+  "transitions": {}
+}

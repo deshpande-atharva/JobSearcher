@@ -1,0 +1,28 @@
+# Search preferences already configured in this repository.
+# No resume, project write-up, or skill evidence is stored here.
+# Skills are left empty on purpose. They are not guessed.
+target_roles:
+  - Software Engineer
+  - Backend Engineer
+  - Full Stack Engineer
+experience_level: "0-2 years required maximum; new-grad and entry-level wording stays eligible"
+max_required_years: 2
+require_us_location: true
+location_preference: "United States"
+employment_types:
+  - Full-time
+  - Internship
+  - Co-op
+technical_skills: []
+backend_skills: []
+frontend_skills: []
+cloud_skills: []
+infrastructure_skills: []
+databases: []
+languages: []
+education: []
+program: ""
+projects: []
+professional_experience: []
+experience_evidence: []
+work_authorization_note: "Sponsorship is enrichment only and is not a hard filter."

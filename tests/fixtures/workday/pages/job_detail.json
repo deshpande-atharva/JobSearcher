@@ -1,0 +1,14 @@
+{
+  "id": "job_detail",
+  "url": "https://nvidia.wd5.myworkdayjobs.com/en-US/NVIDIAExternalCareerSite/job/Santa-Clara/Software-Engineer_JR1001",
+  "title": "Software Engineer",
+  "visible_text": "JR1001 Santa Clara",
+  "buttons": [],
+  "links": [{"id": "lnk_1", "text": "Software Engineer", "role": "link", "href": "https://nvidia.wd5.myworkdayjobs.com/en-US/NVIDIAExternalCareerSite/job/Santa-Clara/Software-Engineer_JR1001"}],
+  "inputs": [],
+  "selects": [],
+  "job_cards": [
+    {"id": "lnk_1", "title": "Software Engineer", "company": "NVIDIA", "location": "Santa Clara, CA", "url": "https://nvidia.wd5.myworkdayjobs.com/en-US/NVIDIAExternalCareerSite/job/Santa-Clara/Software-Engineer_JR1001", "job_id": "JR1001", "description": ""}
+  ],
+  "transitions": {}
+}

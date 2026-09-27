@@ -1,0 +1,15 @@
+{
+  "id": "page_two",
+  "url": "https://nvidia.wd5.myworkdayjobs.com/en-US/NVIDIAExternalCareerSite?q=Software%20Engineer&page=2",
+  "title": "NVIDIA Jobs",
+  "visible_text": "More jobs",
+  "buttons": [],
+  "links": [],
+  "inputs": [],
+  "selects": [],
+  "job_cards": [
+    {"id": "lnk_3", "title": "Platform Engineer", "company": "NVIDIA", "location": "Remote, United States", "url": "https://nvidia.wd5.myworkdayjobs.com/en-US/NVIDIAExternalCareerSite/job/Remote/Platform-Engineer_JR1003", "job_id": "JR1003", "description": ""},
+    {"id": "lnk_dup", "title": "Software Engineer", "company": "NVIDIA", "location": "Santa Clara, CA", "url": "https://nvidia.wd5.myworkdayjobs.com/en-US/NVIDIAExternalCareerSite/job/Santa-Clara/Software-Engineer_JR1001", "job_id": "JR1001", "description": ""}
+  ],
+  "transitions": {}
+}

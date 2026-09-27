@@ -14,6 +14,10 @@ failure.
 Workday CXS tenants tested in this project reject ``limit`` greater than 20
 with HTTP 400 and an empty message. Page size is therefore 20. HTTP 400 is
 treated as a malformed request for that payload, not a transient retry.
+HTTP 404 is not retried. Pagination stops on an empty page, a short page,
+the reported total, or ``max_jobs`` (2000). That cap is the configured bound
+and, for some tenants, the CXS list limit. Hitting it means the board was
+not fully discovered.
 """
 
 from __future__ import annotations
@@ -24,10 +28,12 @@ from typing import Any, ClassVar
 from urllib.parse import urlparse
 
 from src.models.config import CompanyConfig
+from src.services.freshness import is_fresh
 from src.models.job import DateSource, RawJobPosting
 from src.sources.base import DiscoverySource, SourceError, SourceResult, SourceStatus
 from src.sources.fixtures import FixtureStore, slugify
 from src.sources.parsing import (
+    collect_postings,
     extract_job_links,
     extract_json_ld_job_postings,
     json_ld_to_raw_posting,
@@ -37,7 +43,22 @@ from src.utils.dates import parse_datetime
 from src.utils.normalization import clean_text
 from src.utils.urls import is_http_url, join_url
 
-__all__ = ["CXS_PAGE_SIZE", "WorkdaySource", "parse_workday_site"]
+__all__ = ["CXS_PAGE_SIZE", "WorkdaySource", "cxs_request_body", "parse_workday_site"]
+
+_CXS_FIELDS = ("appliedFacets", "limit", "offset", "searchText")
+
+
+def cxs_request_body(*, limit: int, offset: int, search_text: str) -> dict[str, Any]:
+    """Public CXS list body. Facet IDs are not guessed, so appliedFacets stays empty."""
+    body: dict[str, Any] = {
+        "appliedFacets": {},
+        "limit": limit,
+        "offset": offset,
+        "searchText": search_text,
+    }
+    if tuple(body) != _CXS_FIELDS or body["appliedFacets"] != {}:
+        raise SourceError("unsupported Workday filter")
+    return body
 
 _LANG_SEGMENTS = frozenset({"en", "en-us", "en-gb", "fr", "de", "es", "zh", "ja", "ko"})
 _PATH_SKIP = frozenset({"job", "jobs", "details", "search"})
@@ -46,6 +67,34 @@ _PATH_SKIP = frozenset({"job", "jobs", "details", "search"})
 # limit=20 → HTTP 200; limit=32 and limit=50 → HTTP 400 on every tenant.
 CXS_PAGE_SIZE = 20
 CXS_DEFAULT_MAX_JOBS = 2000
+
+
+def _merge_workday_jobs(
+    existing: list[RawJobPosting], incoming: list[RawJobPosting]
+) -> tuple[int, int]:
+    """Keep one row per Workday job id and record every partition that found it."""
+    index: dict[str, int] = {}
+    for position, posting in enumerate(existing):
+        key = (posting.job_id or "").strip().lower()
+        if key:
+            index[key] = position
+    added = 0
+    duplicates = 0
+    for posting in incoming:
+        key = (posting.job_id or "").strip().lower()
+        if key and key in index:
+            host = existing[index[key]]
+            parts = host.provenance.setdefault("workday_partitions", [])
+            for part in posting.provenance.get("workday_partitions") or []:
+                if part not in parts:
+                    parts.append(part)
+            duplicates += 1
+            continue
+        existing.append(posting)
+        if key:
+            index[key] = len(existing) - 1
+        added += 1
+    return added, duplicates
 
 
 def parse_workday_site(identifier: str) -> tuple[str, str, str] | None:
@@ -137,6 +186,7 @@ class WorkdaySource(DiscoverySource):
                 company=company.name,
                 page_size=page_size,
                 max_jobs=max_jobs,
+                search_text="",
             )
             diagnostics.update(cxs_diag)
         except SourceError as exc:
@@ -198,8 +248,28 @@ class WorkdaySource(DiscoverySource):
                 diagnostics={**diagnostics, "fallback_used": True, "fallback_jobs": 0},
             )
 
-        postings = [self._to_posting(entry, company, host, site) for entry in entries]
-        jobs = [p for p in postings if p is not None]
+        jobs = collect_postings(
+            entries,
+            lambda entry: self._to_posting(entry, company, host, site, partition="unfiltered"),
+            log=self.log,
+        )
+        cxs_diag["unfiltered_jobs"] = len(jobs)
+        cxs_diag["unfiltered_fresh_jobs"] = self._fresh_count(jobs)
+        cxs_diag["estimated_incomplete"] = bool(cxs_diag.get("source_list_cap_reached"))
+        cxs_diag["recovered_fresh_jobs"] = 0
+        if cxs_diag.get("source_list_cap_reached"):
+            jobs, partition_diag = await self._search_partitions(
+                host,
+                tenant,
+                site,
+                referer=company.ats_identifier,
+                company=company,
+                page_size=page_size,
+                jobs=jobs,
+                pages_used=int(cxs_diag.get("pages") or 0),
+            )
+            cxs_diag.update(partition_diag)
+        diagnostics.update(cxs_diag)
         return SourceResult.ok(
             self.name,
             label,
@@ -216,7 +286,11 @@ class WorkdaySource(DiscoverySource):
         entries = pick(payload, "jobPostings", "jobs", default=None)
         if not isinstance(entries, list):
             return []
-        return [p for p in (self._to_posting(e, company, "fixture", "site") for e in entries) if p]
+        return collect_postings(
+            entries,
+            lambda entry: self._to_posting(entry, company, "fixture", "site"),
+            log=self.log,
+        )
 
     async def _fetch_cxs(
         self,
@@ -228,6 +302,8 @@ class WorkdaySource(DiscoverySource):
         company: str,
         page_size: int,
         max_jobs: int,
+        search_text: str = "",
+        company_pages: list[int] | None = None,
     ) -> tuple[list[Any], dict[str, Any]]:
         url = f"https://{host}/wday/cxs/{tenant}/{site}/jobs"
         collected: list[Any] = []
@@ -236,9 +312,14 @@ class WorkdaySource(DiscoverySource):
         reported_total: int | None = None
         source_list_cap_reached = False
         max_offset = max(max_jobs, page_size)
+        settings = self.config.settings.discovery.sources.workday
+        company_pages = company_pages if company_pages is not None else [0]
 
         for offset in range(0, max_offset, page_size):
-            body = {"appliedFacets": {}, "limit": page_size, "offset": offset, "searchText": ""}
+            if not self._workday_request_allowed(settings, company_pages[0]):
+                break
+            body = cxs_request_body(limit=page_size, offset=offset, search_text=search_text)
+            self._charge_workday_request(company_pages)
             result = await self.http.request(
                 "POST",
                 url,
@@ -263,6 +344,7 @@ class WorkdaySource(DiscoverySource):
                 http_status=result.status,
                 request_attempt=1,
                 pagination_offset=offset,
+                partition=search_text or "unfiltered",
                 response_size=len(result.text or ""),
                 fallback_used=False,
                 failure_reason=None if result.ok else (result.error or f"HTTP {result.status}"),
@@ -381,13 +463,119 @@ class WorkdaySource(DiscoverySource):
                     company_name=company.name,
                     title=text or None,
                     apply_url=href,
-                    provenance={"parser": "workday-html-links"},
+                    provenance={
+                        "parser": "workday-html-links",
+                        "discovery_method": "html",
+                        "canonical_source": "workday",
+                        "discovered_from": ["workday"],
+                        "source_url": href,
+                    },
                 )
             )
         return postings
 
+    def _workday_request_allowed(self, settings: Any, company_pages: int) -> bool:
+        run_count = int(getattr(self.http, "workday_post_count", 0) or 0)
+        return (
+            run_count < settings.max_requests_per_run
+            and company_pages < settings.max_requests_per_company
+        )
+
+    def _charge_workday_request(self, company_pages: list[int]) -> None:
+        company_pages[0] += 1
+        current = int(getattr(self.http, "workday_post_count", 0) or 0)
+        try:
+            self.http.workday_post_count = current + 1
+        except Exception:
+            return
+
+    async def _search_partitions(
+        self,
+        host: str,
+        tenant: str,
+        site: str,
+        *,
+        referer: str,
+        company: CompanyConfig,
+        page_size: int,
+        jobs: list[RawJobPosting],
+        pages_used: int,
+    ) -> tuple[list[RawJobPosting], dict[str, Any]]:
+        """Keyword slices of a capped board, using the existing searchText field."""
+        settings = self.config.settings.discovery.sources.workday
+        diag: dict[str, Any] = {
+            "partitions_attempted": 0,
+            "partitions_successful": 0,
+            "partitions_failed": 0,
+            "partition_jobs": 0,
+            "partition_duplicates": 0,
+            "partition_requests": 0,
+            "recovered_fresh_jobs": 0,
+        }
+        if not settings.partitions_enabled or settings.max_partitions_per_company <= 0:
+            return jobs, diag
+        texts = [
+            text.strip()
+            for text in settings.partition_search_texts
+            if isinstance(text, str) and text.strip()
+        ][: settings.max_partitions_per_company]
+        company_pages = [pages_used]
+        merged = list(jobs)
+        for text in texts:
+            if not self._workday_request_allowed(settings, company_pages[0]):
+                break
+            diag["partitions_attempted"] += 1
+            before = company_pages[0]
+            try:
+                entries, part_diag = await self._fetch_cxs(
+                    host,
+                    tenant,
+                    site,
+                    referer=referer,
+                    company=company.name,
+                    page_size=page_size,
+                    max_jobs=settings.max_jobs_per_partition,
+                    search_text=text,
+                    company_pages=company_pages,
+                )
+            except SourceError:
+                diag["partitions_failed"] += 1
+                diag["partition_requests"] += company_pages[0] - before
+                continue
+            diag["partition_requests"] += int(part_diag.get("pages") or 0)
+            if part_diag.get("http_status") and not entries and part_diag.get("pages", 0) == 0:
+                diag["partitions_failed"] += 1
+                continue
+            part_jobs = collect_postings(
+                entries,
+                lambda entry, label=text: self._to_posting(
+                    entry, company, host, site, partition=label
+                ),
+                log=self.log,
+            )
+            known_ids = {posting.job_id for posting in merged if posting.job_id}
+            diag["recovered_fresh_jobs"] += sum(
+                1
+                for posting in part_jobs
+                if posting.job_id not in known_ids and self._fresh_count([posting])
+            )
+            added, dupes = _merge_workday_jobs(merged, part_jobs)
+            diag["partitions_successful"] += 1
+            diag["partition_jobs"] += added
+            diag["partition_duplicates"] += dupes
+        return merged, diag
+
+    def _fresh_count(self, postings: list[RawJobPosting]) -> int:
+        hours = self.config.freshness_hours
+        allow_updated = self.config.settings.run.freshness_use_updated_when_posted_missing
+        return sum(
+            1
+            for posting in postings
+            if is_fresh(posting, hours, use_updated_when_posted_missing=allow_updated)[0]
+        )
+
     def _to_posting(
-        self, entry: Any, company: CompanyConfig, host: str, site: str
+        self, entry: Any, company: CompanyConfig, host: str, site: str, partition: str = "unfiltered"
     ) -> RawJobPosting | None:
         if not isinstance(entry, dict):
             return None
@@ -425,5 +613,14 @@ class WorkdaySource(DiscoverySource):
             posted_at_raw=str(posted_raw) if posted_raw else None,
             posted_at=posted_at,
             date_source=date_source,
-            provenance={"ats": "workday", "site": site},
+            provenance={
+                "ats": "workday",
+                "site": site,
+                "discovery_method": "cxs",
+                "canonical_source": "workday",
+                "discovered_from": ["workday"],
+                "workday_partitions": [partition],
+                "source_url": apply_url or "",
+                "source_job_id": str(job_id) if job_id else "",
+            },
         )

@@ -116,7 +116,7 @@ async def verify_url(
     config: AppConfig,
     http: HttpClient | None,
 ) -> UrlCheck:
-    """Optionally probe reachability. Transient failures do not reject ATS URLs."""
+    """Probe reachability. A completed failed probe rejects the URL."""
     if not check.accepted or not config.settings.urls.verify_reachability:
         return check
     if http is None or config.fixture_mode:
@@ -136,15 +136,6 @@ async def verify_url(
         return check
 
     check.reachable = False
-    allow_unverified = config.settings.urls.allow_unverified_ats_urls
-    kind = check.verdict.kind if check.verdict else UrlKind.UNKNOWN
-    if allow_unverified and kind in (UrlKind.ATS, UrlKind.COMPANY_CAREER):
-        check.reason = (
-            f"{check.reason}; reachability probe failed ({result.error or result.status}) "
-            "but the URL shape is a legitimate ATS/company posting"
-        )
-        return check
-
     check.accepted = False
     check.reason = f"application URL was not reachable: {result.error or result.status}"
     return check

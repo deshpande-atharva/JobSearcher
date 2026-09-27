@@ -5,9 +5,9 @@
 # `discovery: manual` were confirmed against a public ATS URL or public job-board
 # API. Nothing in this file is guessed from a company name.
 #
-# Unverified Fortune 500 names stay in the universe with enabled: false so they
-# can be turned on later without being deleted. Fixture companies live only
-# under tests/fixtures and tests/conftest.py.
+# Fortune 500 names without a verified ATS board are enabled and scraped from
+# the official careers URL. Fixture companies live only under tests/fixtures
+# and tests/conftest.py.
 #
 # Priority at runtime:
 #   manual company config → verified ats_registry → automatic ATS discovery
@@ -416,10 +416,9 @@ companies:
       discovery: auto
 
   # =========================================================================
-  # FORTUNE 500 UNIVERSE — retained, disabled until a public ATS is verified
+  # FORTUNE 500 CAREER PAGES — official careers URL, no verified ATS board
   # =========================================================================
   - name: Walmart
-    enabled: false
     aliases: ["Walmart Inc", "Walmart Global Tech", "Wal-Mart Associates"]
     fortune_500: true
     careers_url: "https://careers.walmart.com/"
@@ -427,7 +426,6 @@ companies:
     ats_identifier: null
 
   - name: Amazon
-    enabled: false
     aliases: ["Amazon.com Services LLC", "Amazon Web Services", "AWS", "Amazon Development Center"]
     fortune_500: true
     careers_url: "https://www.amazon.jobs/"
@@ -437,7 +435,6 @@ companies:
       - "https://www.amazon.jobs/en/job_categories/software-development"
 
   - name: Costco Wholesale
-    enabled: false
     aliases: ["Costco"]
     fortune_500: true
     careers_url: "https://www.costco.com/careers.html"
@@ -445,7 +442,6 @@ companies:
     ats_identifier: null
 
   - name: Target
-    enabled: false
     aliases: ["Target Corporation", "Target Enterprise"]
     fortune_500: true
     careers_url: "https://corporate.target.com/careers"
@@ -453,7 +449,6 @@ companies:
     ats_identifier: null
 
   - name: The Home Depot
-    enabled: false
     aliases: ["Home Depot"]
     fortune_500: true
     careers_url: "https://careers.homedepot.com/"
@@ -461,7 +456,6 @@ companies:
     ats_identifier: null
 
   - name: Lowe's
-    enabled: false
     aliases: ["Lowes Companies", "Lowe's Companies Inc"]
     fortune_500: true
     careers_url: "https://talent.lowes.com/us/en"
@@ -469,7 +463,6 @@ companies:
     ats_identifier: null
 
   - name: Apple
-    enabled: false
     aliases: ["Apple Inc"]
     fortune_500: true
     careers_url: "https://jobs.apple.com/en-us/search"
@@ -477,7 +470,6 @@ companies:
     ats_identifier: null
 
   - name: Microsoft
-    enabled: false
     aliases: ["Microsoft Corporation"]
     fortune_500: true
     careers_url: "https://jobs.careers.microsoft.com/global/en/search"
@@ -485,7 +477,6 @@ companies:
     ats_identifier: null
 
   - name: Alphabet
-    enabled: false
     aliases: ["Google", "Google LLC", "Google Inc"]
     fortune_500: true
     careers_url: "https://www.google.com/about/careers/applications/jobs/results/"
@@ -493,7 +484,6 @@ companies:
     ats_identifier: null
 
   - name: Meta
-    enabled: false
     aliases: ["Meta Platforms", "Facebook", "Facebook Inc"]
     fortune_500: true
     careers_url: "https://www.metacareers.com/jobs"
@@ -501,7 +491,6 @@ companies:
     ats_identifier: null
 
   - name: Intel
-    enabled: false
     aliases: ["Intel Corporation"]
     fortune_500: true
     careers_url: "https://jobs.intel.com/en"
@@ -509,7 +498,6 @@ companies:
     ats_identifier: null
 
   - name: IBM
-    enabled: false
     aliases: ["International Business Machines", "IBM Corporation"]
     fortune_500: true
     careers_url: "https://www.ibm.com/careers/search"
@@ -517,7 +505,6 @@ companies:
     ats_identifier: null
 
   - name: Oracle
-    enabled: false
     aliases: ["Oracle America", "Oracle Corporation"]
     fortune_500: true
     careers_url: "https://careers.oracle.com/jobs"
@@ -525,7 +512,6 @@ companies:
     ats_identifier: null
 
   - name: Cisco Systems
-    enabled: false
     aliases: ["Cisco"]
     fortune_500: true
     careers_url: "https://jobs.cisco.com/jobs/SearchJobs"
@@ -533,7 +519,6 @@ companies:
     ats_identifier: null
 
   - name: Qualcomm
-    enabled: false
     aliases: ["Qualcomm Technologies", "Qualcomm Incorporated"]
     fortune_500: true
     careers_url: "https://careers.qualcomm.com/careers"
@@ -541,7 +526,6 @@ companies:
     ats_identifier: null
 
   - name: Advanced Micro Devices
-    enabled: false
     aliases: ["AMD"]
     fortune_500: true
     careers_url: "https://careers.amd.com/careers-home"
@@ -549,7 +533,6 @@ companies:
     ats_identifier: null
 
   - name: Dell Technologies
-    enabled: false
     aliases: ["Dell", "Dell Products"]
     fortune_500: true
     careers_url: "https://jobs.dell.com/"
@@ -557,7 +540,6 @@ companies:
     ats_identifier: null
 
   - name: Hewlett Packard Enterprise
-    enabled: false
     aliases: ["HPE"]
     fortune_500: true
     careers_url: "https://careers.hpe.com/us/en"
@@ -565,7 +547,6 @@ companies:
     ats_identifier: null
 
   - name: Texas Instruments
-    enabled: false
     aliases: ["TI"]
     fortune_500: true
     careers_url: "https://careers.ti.com/"
@@ -573,7 +554,6 @@ companies:
     ats_identifier: null
 
   - name: Uber
-    enabled: false
     aliases: ["Uber Technologies"]
     fortune_500: true
     careers_url: "https://www.uber.com/us/en/careers/list/"
@@ -581,7 +561,6 @@ companies:
     ats_identifier: null
 
   - name: PayPal
-    enabled: false
     aliases: ["PayPal Holdings"]
     fortune_500: true
     careers_url: "https://careers.pypl.com/home/"
@@ -589,7 +568,6 @@ companies:
     ats_identifier: null
 
   - name: Block
-    enabled: false
     aliases: ["Square", "Block Inc"]
     fortune_500: true
     careers_url: "https://block.xyz/careers/jobs"
@@ -597,7 +575,6 @@ companies:
     ats_identifier: null
 
   - name: JPMorgan Chase
-    enabled: false
     aliases: ["JPMorgan Chase & Co", "JP Morgan", "Chase"]
     fortune_500: true
     careers_url: "https://careers.jpmorgan.com/us/en/search-results"
@@ -605,7 +582,6 @@ companies:
     ats_identifier: null
 
   - name: Bank of America
-    enabled: false
     aliases: ["BofA", "Bank of America Corporation"]
     fortune_500: true
     careers_url: "https://careers.bankofamerica.com/en-us/job-search"
@@ -613,7 +589,6 @@ companies:
     ats_identifier: null
 
   - name: Wells Fargo
-    enabled: false
     aliases: ["Wells Fargo & Company", "Wells Fargo Bank"]
     fortune_500: true
     careers_url: "https://www.wellsfargojobs.com/en/jobs/"
@@ -621,7 +596,6 @@ companies:
     ats_identifier: null
 
   - name: Citigroup
-    enabled: false
     aliases: ["Citi", "Citibank"]
     fortune_500: true
     careers_url: "https://jobs.citi.com/search-jobs"
@@ -629,7 +603,6 @@ companies:
     ats_identifier: null
 
   - name: Goldman Sachs
-    enabled: false
     aliases: ["Goldman Sachs Group", "Goldman Sachs & Co"]
     fortune_500: true
     careers_url: "https://higher.gs.com/results"
@@ -637,7 +610,6 @@ companies:
     ats_identifier: null
 
   - name: Morgan Stanley
-    enabled: false
     aliases: ["Morgan Stanley & Co"]
     fortune_500: true
     careers_url: "https://www.morganstanley.com/careers/career-opportunities-search"
@@ -645,7 +617,6 @@ companies:
     ats_identifier: null
 
   - name: American Express
-    enabled: false
     aliases: ["Amex", "American Express Travel Related Services"]
     fortune_500: true
     careers_url: "https://www.americanexpress.com/en-us/careers/"
@@ -653,7 +624,6 @@ companies:
     ats_identifier: null
 
   - name: Visa
-    enabled: false
     aliases: ["Visa Inc", "Visa U.S.A. Inc", "Visa Technology & Operations"]
     fortune_500: true
     careers_url: "https://corporate.visa.com/en/jobs/"
@@ -661,7 +631,6 @@ companies:
     ats_identifier: null
 
   - name: Mastercard
-    enabled: false
     aliases: ["Mastercard Incorporated", "Mastercard International"]
     fortune_500: true
     careers_url: "https://careers.mastercard.com/us/en/search-results"
@@ -669,7 +638,6 @@ companies:
     ats_identifier: null
 
   - name: Fidelity Investments
-    enabled: false
     aliases: ["FMR LLC", "Fidelity"]
     fortune_500: true
     careers_url: "https://www.fidelity.com/about-fidelity/careers"
@@ -677,7 +645,6 @@ companies:
     ats_identifier: null
 
   - name: UnitedHealth Group
-    enabled: false
     aliases: ["UnitedHealthcare", "Optum", "UnitedHealth Group Incorporated"]
     fortune_500: true
     careers_url: "https://careers.unitedhealthgroup.com/"
@@ -685,7 +652,6 @@ companies:
     ats_identifier: null
 
   - name: Progressive
-    enabled: false
     aliases: ["Progressive Casualty Insurance", "Progressive Corporation"]
     fortune_500: true
     careers_url: "https://www.progressive.com/careers/"
@@ -693,7 +659,6 @@ companies:
     ats_identifier: null
 
   - name: Liberty Mutual
-    enabled: false
     aliases: ["Liberty Mutual Insurance", "Liberty Mutual Group"]
     fortune_500: true
     careers_url: "https://jobs.libertymutualgroup.com/"
@@ -701,7 +666,6 @@ companies:
     ats_identifier: null
 
   - name: CVS Health
-    enabled: false
     aliases: ["CVS Pharmacy", "Aetna", "CVS Health Corporation"]
     fortune_500: true
     careers_url: "https://jobs.cvshealth.com/"
@@ -709,7 +673,6 @@ companies:
     ats_identifier: null
 
   - name: Johnson & Johnson
-    enabled: false
     aliases: ["Johnson and Johnson", "J&J"]
     fortune_500: true
     careers_url: "https://www.careers.jnj.com/en/jobs/"
@@ -717,7 +680,6 @@ companies:
     ats_identifier: null
 
   - name: Pfizer
-    enabled: false
     aliases: ["Pfizer Inc"]
     fortune_500: true
     careers_url: "https://www.pfizer.com/about/careers"
@@ -725,7 +687,6 @@ companies:
     ats_identifier: null
 
   - name: Boeing
-    enabled: false
     aliases: ["The Boeing Company"]
     fortune_500: true
     careers_url: "https://jobs.boeing.com/"
@@ -733,7 +694,6 @@ companies:
     ats_identifier: null
 
   - name: Lockheed Martin
-    enabled: false
     aliases: ["Lockheed Martin Corporation"]
     fortune_500: true
     careers_url: "https://www.lockheedmartinjobs.com/search-jobs"
@@ -741,7 +701,6 @@ companies:
     ats_identifier: null
 
   - name: RTX
-    enabled: false
     aliases: ["Raytheon", "Raytheon Technologies", "Collins Aerospace", "Pratt & Whitney"]
     fortune_500: true
     careers_url: "https://careers.rtx.com/global/en/search-results"
@@ -749,7 +708,6 @@ companies:
     ats_identifier: null
 
   - name: General Motors
-    enabled: false
     aliases: ["GM", "General Motors Company"]
     fortune_500: true
     careers_url: "https://search-careers.gm.com/en/jobs/"
@@ -757,7 +715,6 @@ companies:
     ats_identifier: null
 
   - name: Ford Motor
-    enabled: false
     aliases: ["Ford", "Ford Motor Company"]
     fortune_500: true
     careers_url: "https://corporate.ford.com/careers.html"
@@ -765,7 +722,6 @@ companies:
     ats_identifier: null
 
   - name: Tesla
-    enabled: false
     aliases: ["Tesla Inc", "Tesla Motors"]
     fortune_500: true
     careers_url: "https://www.tesla.com/careers/search/"
@@ -773,7 +729,6 @@ companies:
     ats_identifier: null
 
   - name: Deere & Company
-    enabled: false
     aliases: ["John Deere", "Deere"]
     fortune_500: true
     careers_url: "https://careers.deere.com/careers"
@@ -781,7 +736,6 @@ companies:
     ats_identifier: null
 
   - name: Honeywell
-    enabled: false
     aliases: ["Honeywell International"]
     fortune_500: true
     careers_url: "https://careers.honeywell.com/us/en/search-results"
@@ -789,7 +743,6 @@ companies:
     ats_identifier: null
 
   - name: AT&T
-    enabled: false
     aliases: ["AT&T Services", "ATT"]
     fortune_500: true
     careers_url: "https://www.att.jobs/search-jobs"
@@ -797,7 +750,6 @@ companies:
     ats_identifier: null
 
   - name: Verizon
-    enabled: false
     aliases: ["Verizon Communications", "Verizon Business"]
     fortune_500: true
     careers_url: "https://www.verizon.com/about/careers/job-search"
@@ -805,7 +757,6 @@ companies:
     ats_identifier: null
 
   - name: Comcast
-    enabled: false
     aliases: ["Comcast Cable Communications", "NBCUniversal"]
     fortune_500: true
     careers_url: "https://jobs.comcast.com/jobs"
@@ -813,7 +764,6 @@ companies:
     ats_identifier: null
 
   - name: The Walt Disney Company
-    enabled: false
     aliases: ["Disney", "Walt Disney"]
     fortune_500: true
     careers_url: "https://jobs.disneycareers.com/search-jobs"
@@ -821,7 +771,6 @@ companies:
     ats_identifier: null
 
   - name: Netflix
-    enabled: false
     aliases: ["Netflix Inc"]
     fortune_500: true
     careers_url: "https://explore.jobs.netflix.net/careers"
@@ -829,7 +778,6 @@ companies:
     ats_identifier: null
 
   - name: United Parcel Service
-    enabled: false
     aliases: ["UPS"]
     fortune_500: true
     careers_url: "https://www.jobs-ups.com/search-jobs"
@@ -837,7 +785,6 @@ companies:
     ats_identifier: null
 
   - name: FedEx
-    enabled: false
     aliases: ["FedEx Corporation", "Federal Express"]
     fortune_500: true
     careers_url: "https://careers.fedex.com/"
@@ -845,7 +792,6 @@ companies:
     ats_identifier: null
 
   - name: Accenture
-    enabled: false
     aliases: ["Accenture LLP", "Accenture Federal Services"]
     fortune_500: true
     careers_url: "https://www.accenture.com/us-en/careers/jobsearch"
@@ -853,7 +799,6 @@ companies:
     ats_identifier: null
 
   - name: Deloitte
-    enabled: false
     aliases: ["Deloitte Consulting", "Deloitte & Touche", "Deloitte LLP"]
     fortune_500: false
     careers_url: "https://apply.deloitte.com/careers"
@@ -861,7 +806,6 @@ companies:
     ats_identifier: null
 
   - name: Leidos
-    enabled: false
     aliases: ["Leidos Holdings", "Leidos Inc"]
     fortune_500: true
     careers_url: "https://careers.leidos.com/search/jobs"
@@ -869,10 +813,107 @@ companies:
     ats_identifier: null
 
   - name: Booz Allen Hamilton
-    enabled: false
     aliases: ["Booz Allen"]
     fortune_500: true
     careers_url: "https://careers.boozallen.com/careers"
+    ats_type: null
+    ats_identifier: null
+
+
+  # --- Official career pages proposed by Gemini and checked to load ---
+  - name: "Cloudflare"
+    fortune_500: false
+    careers_url: "https://www.cloudflare.com/careers/"
+    ats_type: null
+    ats_identifier: null
+
+  - name: "Intuit"
+    fortune_500: false
+    careers_url: "https://www.intuit.com/careers/"
+    ats_type: null
+    ats_identifier: null
+
+  - name: "HubSpot"
+    fortune_500: false
+    careers_url: "https://www.hubspot.com/careers"
+    ats_type: null
+    ats_identifier: null
+
+  - name: "Zoom"
+    fortune_500: false
+    careers_url: "https://careers.zoom.us/"
+    ats_type: null
+    ats_identifier: null
+
+  - name: "Zendesk"
+    fortune_500: false
+    careers_url: "https://www.zendesk.com/company/careers/"
+    ats_type: null
+    ats_identifier: null
+
+  - name: "MongoDB"
+    fortune_500: false
+    careers_url: "https://www.mongodb.com/company/careers"
+    ats_type: null
+    ats_identifier: null
+
+  - name: "DocuSign"
+    fortune_500: false
+    careers_url: "https://careers.docusign.com/careers-home"
+    ats_type: null
+    ats_identifier: null
+
+  - name: "Okta"
+    fortune_500: false
+    careers_url: "https://www.okta.com/company/careers/"
+    ats_type: null
+    ats_identifier: null
+
+  - name: "Fastly"
+    fortune_500: false
+    careers_url: "https://www.fastly.com/about/careers"
+    ats_type: null
+    ats_identifier: null
+
+  - name: "Databricks"
+    fortune_500: false
+    careers_url: "https://www.databricks.com/company/careers"
+    ats_type: null
+    ats_identifier: null
+
+  - name: "Datadog"
+    fortune_500: false
+    careers_url: "https://careers.datadoghq.com"
+    ats_type: null
+    ats_identifier: null
+
+  - name: "CrowdStrike"
+    fortune_500: false
+    careers_url: "https://www.crowdstrike.com/en-us/careers/"
+    ats_type: null
+    ats_identifier: null
+
+  - name: "Snowflake"
+    fortune_500: false
+    careers_url: "https://careers.snowflake.com/us/en"
+    ats_type: null
+    ats_identifier: null
+
+  - name: "Elastic"
+    fortune_500: false
+    careers_url: "https://www.elastic.co/careers"
+    ats_type: null
+    ats_identifier: null
+
+  - name: "Atlassian"
+    fortune_500: false
+    careers_url: "https://www.atlassian.com/company/careers"
+    ats_type: null
+    ats_identifier: null
+
+  - name: "Autodesk"
+    fortune_500: false
+    careers_url: "https://www.autodesk.com/careers/overview"
     ats_type: null
     ats_identifier: null
 

@@ -1,0 +1,31 @@
+{
+  "id": "load_more",
+  "url": "https://boards.greenhouse.io/acme/jobs?page=2",
+  "title": "Open roles",
+  "visible_text": "More jobs",
+  "buttons": [{"id": "btn_next", "text": "Next Page", "role": "button"}],
+  "links": [],
+  "inputs": [],
+  "selects": [],
+  "job_cards": [
+    {
+      "id": "card_1001",
+      "title": "Software Engineer",
+      "company": "Acme",
+      "location": "Seattle, WA",
+      "url": "https://boards.greenhouse.io/acme/jobs/1001",
+      "job_id": "1001",
+      "description": "Build APIs in Python. 0-2 years of experience."
+    },
+    {
+      "id": "card_1002",
+      "title": "Backend Engineer",
+      "company": "Acme",
+      "location": "Austin, TX",
+      "url": "https://boards.greenhouse.io/acme/jobs/1002",
+      "job_id": "1002",
+      "description": "2+ years preferred. Python services."
+    }
+  ],
+  "transitions": {}
+}

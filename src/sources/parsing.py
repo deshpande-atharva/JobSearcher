@@ -26,7 +26,22 @@ from src.utils.logging import get_logger
 from src.utils.normalization import clean_text, html_to_text
 from src.utils.urls import is_http_url, join_url
 
+def collect_postings(entries: list[Any], convert, *, log) -> list[RawJobPosting]:
+    """Convert records one at a time. One bad record does not drop the rest."""
+    jobs: list[RawJobPosting] = []
+    for entry in entries:
+        try:
+            posting = convert(entry)
+        except Exception as exc:
+            log.warning("skipped malformed posting", error_type=type(exc).__name__)
+            continue
+        if posting is not None:
+            jobs.append(posting)
+    return jobs
+
+
 __all__ = [
+    "collect_postings",
     "extract_job_links",
     "extract_json_ld_job_postings",
     "extract_next_data",

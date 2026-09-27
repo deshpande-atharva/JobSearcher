@@ -1,0 +1,12 @@
+{
+  "id": "changed_layout",
+  "url": "https://nvidia.wd5.myworkdayjobs.com/en-US/NVIDIAExternalCareerSite",
+  "title": "NVIDIA Careers",
+  "visible_text": "Search Openings",
+  "buttons": [{"id": "btn_explore", "text": "Search Openings", "role": "button"}],
+  "links": [],
+  "inputs": [],
+  "selects": [],
+  "job_cards": [],
+  "transitions": {"btn_explore": "search_results"}
+}

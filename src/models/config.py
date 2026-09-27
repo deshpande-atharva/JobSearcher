@@ -63,6 +63,9 @@ class RunSettings(_Base):
     freshness_use_updated_when_posted_missing: bool = True
     max_concurrency: int = Field(default=8, ge=1, le=64)
     request_timeout_seconds: float = Field(default=30.0, gt=0)
+    # One company cannot hold the daily run past this bound. Workday pagination
+    # of a capped board still fits; a hung career host is isolated.
+    company_timeout_seconds: float = Field(default=240.0, gt=0, le=600)
     retry_attempts: int = Field(default=3, ge=0, le=10)
     retry_backoff_seconds: float = Field(default=1.5, gt=0)
     user_agent: str = "job-agent/1.0"
@@ -72,14 +75,31 @@ class RunSettings(_Base):
 
 
 class JobrightSourceSettings(_Base):
-    enabled: bool = True
-    entry_url: str = "https://jobright.ai/entry-level-jobs"
-    max_pages: int = Field(default=3, ge=1, le=25)
-    allow_browser_render: bool = True
+    enabled: bool = False
+    entry_url: str = "https://jobright.ai/remote-jobs/software-engineering"
+    max_pages: int = Field(default=1, ge=1, le=5)
+    allow_browser_render: bool = False
+    max_queries: int = Field(default=1, ge=0, le=5)
+    max_results_per_query: int = Field(default=40, ge=1, le=100)
+    max_total_results: int = Field(default=80, ge=1, le=200)
+    max_detail_pages: int = Field(default=1, ge=0, le=5)
+    max_navigation_attempts: int = Field(default=1, ge=0, le=3)
 
 
 class SimpleSourceSettings(_Base):
     enabled: bool = True
+
+
+class BoardSourceSettings(_Base):
+    """Public Lever or Ashby board. Descriptions come from the JSON API, not a browser."""
+
+    enabled: bool = True
+    max_companies: int = Field(default=8, ge=0, le=50)
+    max_jobs: int = Field(default=400, ge=1, le=2000)
+    max_detail_pages: int = Field(default=0, ge=0, le=10)
+    max_navigation_attempts: int = Field(default=0, ge=0, le=3)
+    # Smoke-only ordering. Production stays false so the daily cap keeps API order.
+    prioritize_fresh_targets: bool = False
 
 
 class WorkdaySourceSettings(_Base):
@@ -88,19 +108,37 @@ class WorkdaySourceSettings(_Base):
     Public Workday tenants tested here reject ``limit`` above 20 with HTTP 400.
     ``max_concurrency`` bounds Workday only; other ATS adapters keep the global
     run concurrency.
+
+    ``browser_enabled`` adds Playwright discovery beside the CXS adapter. It
+    stays off so a normal daily run does not open a browser.
     """
 
     enabled: bool = True
     page_size: int = Field(default=20, ge=1, le=20)
     max_jobs: int = Field(default=2000, ge=20, le=5000)
     max_concurrency: int = Field(default=2, ge=1, le=8)
+    browser_enabled: bool = False
+    browser_max_jobs: int = Field(default=80, ge=1, le=100)
+    browser_detail_limit: int = Field(default=12, ge=0, le=20)
+    # searchText is already part of the public CXS body. Partitions run only
+    # after the unfiltered board hits max_jobs. Facet ids are not invented.
+    partitions_enabled: bool = False
+    max_partitions_per_company: int = Field(default=3, ge=0, le=6)
+    max_jobs_per_partition: int = Field(default=120, ge=20, le=400)
+    max_requests_per_company: int = Field(default=140, ge=20, le=400)
+    max_requests_per_run: int = Field(default=800, ge=20, le=2000)
+    partition_search_texts: tuple[str, ...] = (
+        "software engineer",
+        "backend engineer",
+        "platform engineer",
+    )
 
 
 class DiscoverySources(_Base):
     jobright: JobrightSourceSettings = JobrightSourceSettings()
     greenhouse: SimpleSourceSettings = SimpleSourceSettings()
-    lever: SimpleSourceSettings = SimpleSourceSettings()
-    ashby: SimpleSourceSettings = SimpleSourceSettings()
+    lever: BoardSourceSettings = BoardSourceSettings()
+    ashby: BoardSourceSettings = BoardSourceSettings()
     smartrecruiters: SimpleSourceSettings = SimpleSourceSettings()
     workday: WorkdaySourceSettings = WorkdaySourceSettings()
     icims: SimpleSourceSettings = SimpleSourceSettings()
@@ -115,8 +153,13 @@ class DiscoverySettings(_Base):
     sources: DiscoverySources = DiscoverySources()
     ats_registry: str = "config/ats_registry.yaml"
     auto_detect_ats: bool = True
-    persist_ats_registry: bool = True
+    # Daily production does not rewrite the registry. An explicit maintenance
+    # command may set this true. Learned failures stay in memory for the run.
+    persist_ats_registry: bool = False
     career_detail_fetch_limit: int = Field(default=12, ge=0, le=80)
+    # One career page cannot consume the whole company timeout. Playwright
+    # navigation is already capped at 45s; this bounds the rest of the fallback.
+    career_stage_budget_seconds: float = Field(default=90.0, gt=0, le=240)
     skip_career_page_when_ats_has_jobs: bool = True
 
 
@@ -158,7 +201,8 @@ class UrlSettings(_Base):
     ats_hosts: dict[str, tuple[str, ...]] = Field(default_factory=dict)
     strip_query_params: tuple[str, ...] = ()
     verify_reachability: bool = True
-    allow_unverified_ats_urls: bool = True
+    # Kept so existing config files load. A failed live probe rejects regardless.
+    allow_unverified_ats_urls: bool = False
 
     def to_policy(self) -> UrlPolicy:
         return UrlPolicy(
@@ -200,7 +244,10 @@ class LLMSettings(_Base):
     timeout_seconds: float = Field(default=60.0, gt=0)
     max_calls_per_run: int = Field(default=300, ge=0)
     circuit_breaker_failures: int = Field(default=5, ge=1)
+    # After the breaker opens, one later call may probe. Success closes it.
+    circuit_reset_seconds: float = Field(default=30.0, ge=0)
     retry_attempts: int = Field(default=2, ge=0, le=5)
+    retry_backoff_seconds: float = Field(default=0.5, ge=0)
 
 
 class OutputSettings(_Base):
@@ -220,6 +267,7 @@ class PlaywrightSettings(_Base):
     enabled: bool = True
     headless: bool = True
     timeout_seconds: float = Field(default=45.0, gt=0)
+    max_renders_per_run: int = Field(default=12, ge=0, le=40)
 
 
 class ScrapingSettings(_Base):
@@ -231,6 +279,23 @@ class ScrapingSettings(_Base):
 
 class FixtureSettings(_Base):
     directory: str = "tests/fixtures"
+
+
+class GreenhousePilotSettings(_Base):
+    """Bounds for the Greenhouse navigation pilot. Production discovery does not use these."""
+
+    max_navigation_steps: int = Field(default=30, ge=1, le=100)
+    max_navigation_seconds: float = Field(default=90.0, gt=0)
+    navigation_dir: str = "data/navigation"
+    report_dir: str = "data/reports"
+
+
+class CandidateSettings(_Base):
+    """Resume-derived profile. Search filters stay in ``filters`` and ``roles.yaml``."""
+
+    resume_path: str = "data/candidate/resume.pdf"
+    profile_path: str = "data/candidate/profile.json"
+    history_dir: str = "data/candidate/profile_history"
 
 
 class Settings(_Base):
@@ -246,6 +311,8 @@ class Settings(_Base):
     notifications: NotificationSettings = NotificationSettings()
     scraping: ScrapingSettings = ScrapingSettings()
     fixtures: FixtureSettings = FixtureSettings()
+    greenhouse_pilot: GreenhousePilotSettings = GreenhousePilotSettings()
+    candidate: CandidateSettings = CandidateSettings()
 
 
 # ---------------------------------------------------------------------------

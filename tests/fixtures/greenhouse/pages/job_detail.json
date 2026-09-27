@@ -1,0 +1,22 @@
+{
+  "id": "job_detail",
+  "url": "https://boards.greenhouse.io/acme/jobs/1001",
+  "title": "Software Engineer",
+  "visible_text": "Software Engineer Seattle",
+  "buttons": [],
+  "links": [],
+  "inputs": [],
+  "selects": [],
+  "job_cards": [
+    {
+      "id": "card_1001",
+      "title": "Software Engineer",
+      "company": "Acme",
+      "location": "Seattle, WA",
+      "url": "https://boards.greenhouse.io/acme/jobs/1001",
+      "job_id": "1001",
+      "description": "Build APIs in Python. 0-2 years required."
+    }
+  ],
+  "transitions": {}
+}

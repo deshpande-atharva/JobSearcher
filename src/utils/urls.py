@@ -315,14 +315,14 @@ _PATH_ID_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(r"/jobs/(\d{4,})(?:/|$)"),
     # Lever / Ashby: UUID posting ids
     re.compile(r"/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})(?:/|$)", re.IGNORECASE),
-    # Workday requisition: ..._R-12345 or ..._JR1234567
-    re.compile(r"_((?:R|JR|REQ)-?\d{3,})(?:/|$)", re.IGNORECASE),
+    # Workday requisition: ..._R-12345, ..._JR1234567, or ..._JR1234567-1
+    re.compile(r"_((?:R|JR|REQ)-?\d{3,}(?:-\d+)?)(?:/|$)", re.IGNORECASE),
     # SmartRecruiters: /Company/743999123456789-title
     re.compile(r"/(\d{12,})-", re.IGNORECASE),
     # iCIMS: /jobs/12345/software-engineer/job
     re.compile(r"/jobs?/(\d{3,})(?:/|$)"),
-    # Generic trailing requisition token: /job/R2412345
-    re.compile(r"/((?:R|JR|REQ)-?\d{3,})(?:/|$)", re.IGNORECASE),
+    # Generic trailing requisition token: /job/R2412345 or /job/JR2001099-1
+    re.compile(r"/((?:R|JR|REQ)-?\d{3,}(?:-\d+)?)(?:/|$)", re.IGNORECASE),
     # Generic numeric posting at end of path
     re.compile(r"/(\d{5,})(?:/|$)"),
 )

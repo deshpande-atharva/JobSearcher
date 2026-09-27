@@ -18,6 +18,7 @@ from __future__ import annotations
 import asyncio
 import json
 import re
+import time
 from abc import ABC, abstractmethod
 from typing import Any, TypeVar
 
@@ -31,6 +32,7 @@ __all__ = [
     "LLMStats",
     "NullLLMProvider",
     "build_llm_provider",
+    "classify_provider_error",
     "json_schema_for",
 ]
 
@@ -45,14 +47,25 @@ class LLMStats(BaseModel):
     """Per-run accounting, surfaced in the run summary."""
 
     calls: int = 0
+    successes: int = 0
     failures: int = 0
+    retries: int = 0
+    fallbacks: int = 0
+    deterministic_avoided: int = 0
+    recovery_attempts: int = 0
     skipped_budget: int = 0
     skipped_circuit_open: int = 0
     by_purpose: dict[str, int] = Field(default_factory=dict)
+    failures_by_category: dict[str, int] = Field(default_factory=dict)
+    circuit_state: str = "CLOSED"
 
     def record_call(self, purpose: str) -> None:
         self.calls += 1
         self.by_purpose[purpose] = self.by_purpose.get(purpose, 0) + 1
+
+    def record_failure(self, category: str) -> None:
+        self.failures += 1
+        self.failures_by_category[category] = self.failures_by_category.get(category, 0) + 1
 
 
 def json_schema_for(model: type[BaseModel]) -> dict[str, Any]:
@@ -111,6 +124,38 @@ def _extract_json_object(text: str) -> str:
     return cleaned
 
 
+_RETRYABLE = frozenset({"429", "503", "timeout", "connection"})
+_SECRET_RE = re.compile(r"(?i)\b(api[_-]?key|token|password|secret|authorization)\b\s*[=:]\s*\S+")
+
+
+def classify_provider_error(exc: BaseException) -> str:
+    """Bucket a provider exception without retaining secrets."""
+    if isinstance(exc, (asyncio.TimeoutError, TimeoutError)):
+        return "timeout"
+    status = getattr(exc, "status_code", None)
+    if not isinstance(status, int):
+        code = getattr(exc, "code", None)
+        status = code if isinstance(code, int) else None
+    text = _SECRET_RE.sub(r"\1=<redacted>", str(exc)).lower()
+    if status == 429 or "429" in text or "resource_exhausted" in text or "rate limit" in text:
+        return "429"
+    if status == 503 or "503" in text or "unavailable" in text:
+        return "503"
+    if isinstance(status, int) and 500 <= status <= 599:
+        return "503"
+    if any(token in text for token in ("connection", "connecterror", "network", "timed out")):
+        return "connection"
+    return "other"
+
+
+def _permanent_configuration(exc: BaseException) -> bool:
+    status = getattr(exc, "status_code", None)
+    if status in {400, 401, 403}:
+        return True
+    text = str(exc).lower()
+    return any(token in text for token in ("unauthenticated", "permission_denied", "api key", "invalid_argument"))
+
+
 class LLMProvider(ABC):
     """Base class handling budget, retries, parsing and validation.
 
@@ -124,6 +169,8 @@ class LLMProvider(ABC):
         self.stats = LLMStats()
         self._consecutive_failures = 0
         self._circuit_open = False
+        self._opened_at: float | None = None
+        self._probing = False
 
     # --- subclass contract --------------------------------------------------
 
@@ -153,7 +200,63 @@ class LLMProvider(ABC):
 
     def can_call(self) -> bool:
         """Cheap pre-check so callers can skip building an expensive prompt."""
-        return self.available and not self._circuit_open and self.budget_remaining > 0
+        return self.available and self._circuit_allows_call() and self.budget_remaining > 0
+
+    @property
+    def circuit_state(self) -> str:
+        if not self._circuit_open:
+            state = "CLOSED"
+        elif self._probing:
+            state = "HALF_OPEN"
+        else:
+            state = "OPEN"
+        self.stats.circuit_state = state
+        return state
+
+    def note_deterministic_avoided(self) -> None:
+        self.stats.deterministic_avoided += 1
+
+    def note_unavailable(self) -> None:
+        """A caller needed the model and did not invoke it."""
+        if self._circuit_open and not self._probe_due():
+            self.stats.skipped_circuit_open += 1
+        else:
+            self.stats.fallbacks += 1
+
+    def _circuit_allows_call(self) -> bool:
+        if not self._circuit_open:
+            return True
+        return self._probe_due()
+
+    def _probe_due(self) -> bool:
+        if self._opened_at is None:
+            return True
+        return (time.monotonic() - self._opened_at) >= self.settings.circuit_reset_seconds
+
+    def _open_circuit(self) -> None:
+        # The breaker lives on this provider instance. A new process starts
+        # CLOSED. There is no on-disk circuit state to go stale.
+        self._circuit_open = True
+        self._probing = False
+        self._opened_at = time.monotonic()
+        self.stats.circuit_state = "OPEN"
+        log.error(
+            "llm circuit breaker opened; continuing with deterministic logic only",
+            provider=self.name,
+            consecutive_failures=self._consecutive_failures,
+        )
+
+    def _close_circuit(self) -> None:
+        self._circuit_open = False
+        self._probing = False
+        self._opened_at = None
+        self._consecutive_failures = 0
+        self.stats.circuit_state = "CLOSED"
+
+    async def _pause(self, attempt: int) -> None:
+        delay = min(self.settings.retry_backoff_seconds * attempt, 2.0)
+        if delay > 0:
+            await asyncio.sleep(delay)
 
     async def structured(
         self,
@@ -171,60 +274,80 @@ class LLMProvider(ABC):
         if not self.available:
             return None
         if self._circuit_open:
-            self.stats.skipped_circuit_open += 1
-            return None
+            if not self._probe_due():
+                self.stats.skipped_circuit_open += 1
+                self.circuit_state
+                return None
+            self._probing = True
+            self.stats.recovery_attempts += 1
+            self.stats.circuit_state = "HALF_OPEN"
         if self.budget_remaining <= 0:
             self.stats.skipped_budget += 1
             log.debug("llm budget exhausted", purpose=purpose, max_calls=self.settings.max_calls_per_run)
             return None
 
         schema = json_schema_for(response_model)
-        attempts = self.settings.retry_attempts + 1
-        last_error: str | None = None
-
-        for attempt in range(1, attempts + 1):
+        attempt = 0
+        while True:
             if self.budget_remaining <= 0:
                 self.stats.skipped_budget += 1
                 break
+            attempt += 1
+            if attempt > 1:
+                self.stats.retries += 1
             self.stats.record_call(purpose)
+            category = "other"
+            permanent = False
             try:
                 raw = await asyncio.wait_for(
                     self._generate(prompt=prompt, system=system, schema=schema),
                     timeout=self.settings.timeout_seconds,
                 )
-            except asyncio.TimeoutError:
-                last_error = "timeout"
             except asyncio.CancelledError:
                 raise
-            except Exception as exc:  # transport, auth, quota, anything
-                last_error = f"{type(exc).__name__}: {exc}"
+            except (asyncio.TimeoutError, TimeoutError):
+                category = "timeout"
+                last_error = "timeout"
+            except Exception as exc:
+                category = classify_provider_error(exc)
+                permanent = _permanent_configuration(exc)
+                last_error = _SECRET_RE.sub(r"\1=<redacted>", f"{type(exc).__name__}: {exc}")[:300]
             else:
                 parsed = self._parse(raw, response_model)
                 if parsed is not None:
-                    self._consecutive_failures = 0
+                    self.stats.successes += 1
+                    self._close_circuit()
                     return parsed
+                category = "schema"
                 last_error = "response did not match the requested schema"
 
-            self.stats.failures += 1
+            self.stats.record_failure(category)
             self._consecutive_failures += 1
             log.warning(
                 "llm call failed",
                 purpose=purpose,
                 attempt=attempt,
                 provider=self.name,
+                category=category,
                 error=last_error,
             )
-            if self._consecutive_failures >= self.settings.circuit_breaker_failures:
-                self._circuit_open = True
-                log.error(
-                    "llm circuit breaker opened; continuing with deterministic logic only",
-                    provider=self.name,
-                    consecutive_failures=self._consecutive_failures,
-                )
+            quota_exhausted = category == "429" and self._consecutive_failures >= 2
+            if (
+                permanent
+                or quota_exhausted
+                or self._consecutive_failures >= self.settings.circuit_breaker_failures
+            ):
+                self._open_circuit()
                 break
-            if attempt < attempts:
-                await asyncio.sleep(min(0.5 * attempt, 2.0))
+            if category not in _RETRYABLE or permanent:
+                break
+            allowed = 2 if category == "429" else self.settings.retry_attempts + 1
+            if attempt >= allowed:
+                break
+            await self._pause(attempt)
 
+        self.stats.fallbacks += 1
+        self.circuit_state
         return None
 
     def _parse(self, raw: str, response_model: type[T]) -> T | None:

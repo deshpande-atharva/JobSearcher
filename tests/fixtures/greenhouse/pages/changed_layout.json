@@ -1,0 +1,12 @@
+{
+  "id": "changed_layout",
+  "url": "https://boards.greenhouse.io/acme",
+  "title": "Acme Careers",
+  "visible_text": "Explore Opportunities",
+  "buttons": [{"id": "btn_explore", "text": "Explore Opportunities", "role": "button"}],
+  "links": [],
+  "inputs": [],
+  "selects": [],
+  "job_cards": [],
+  "transitions": {"btn_explore": "job_listing"}
+}

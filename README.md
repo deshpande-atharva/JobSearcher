@@ -31,49 +31,61 @@ There is deliberately **no** `require_h1b_sponsorship` setting. Adding one to `c
 
 ## Architecture
 
-The run is a **hybrid multi-agent pipeline** orchestrated with [LangGraph](https://github.com/langchain-ai/langgraph). Typed shared state is a Pydantic `PipelineState`.
+The daily run is one LangGraph pipeline. Typed shared state is a Pydantic `PipelineState`. The production order is fixed:
 
 ```
-                    DISCOVERY
-                       │
-        ┌──────────────┼────────────────┐
-        │              │                │
-        ▼              ▼                ▼
-   Structured      Company          Aggregator
-   ATS sources     career pages     (Jobright, …)
-        │              │                │
-        └──────────────┼────────────────┘
-                       ▼
-              Normalize + cross-source dedup
-                       ▼
-     Role → Seniority → Location → Freshness → Direct URL
-                       ▼
-           H-1B evidence  (never a filter)
-                       ▼
-           Historical dedup → XLSX tracker
+Discovery
+   ↓
+Extraction
+   ↓
+Role
+   ↓
+Seniority / Experience
+   ↓
+Location
+   ↓
+Employment
+   ↓
+Freshness
+   ↓
+URL Verification
+   ↓
+H-1B Enrichment
+   ↓
+Deduplication
+   ↓
+QC
+   ↓
+Job Intelligence
+   ↓
+Critic
+   ↓
+XLSX Output
 ```
 
-Jobright is optional. Structured ATS boards are preferred when a public identifier is configured or auto-detected from the careers URL. One source failing does not stop the others.
+Employment checks run after location passes, inside the location node. The critic runs after job intelligence, inside the intelligence node. Neither step reorders the gates above.
 
-Deterministic code handles the large majority of decisions (keywords, dates, URL hosts, experience ranges, explicit sponsorship phrases). Gemini is used only when semantic judgment is actually useful: ambiguous role family, unclear seniority, unclear sponsorship wording, or a posting the parsers could not read. An LLM failure never crashes the run.
+Deterministic gates run before semantic review. A title that is clearly software engineering, or clearly not, never waits on Gemini. Gemini is optional. It cannot change job id, source, official URL, posted timestamp, date source, location, or freshness. Freshness stays a deterministic 24-hour check. H-1B enrichment never removes a job.
+
+Production discovery uses Greenhouse, Workday, Lever, Ashby, and company career pages. Jobright is disabled. Workday browser discovery is disabled. iCIMS and SmartRecruiters can be recognized on a public URL, but they are not orchestrated production collectors. One source failing does not stop the others. A source that succeeds and returns zero jobs is empty, not failed.
 
 ### Agents
 
 | Agent | Role |
 | --- | --- |
-| Discovery | Jobright, Greenhouse, Lever, Ashby, SmartRecruiters, Workday, iCIMS, company career pages |
+| Discovery | Greenhouse, Workday, Lever, Ashby, company career pages. Jobright stays off. |
 | Extraction | Raw payload → `Job` |
-| Role classification | Software-engineering-related work, not a fixed title list |
+| Role classification | Deterministic accept, deterministic reject, or semantic review |
 | Seniority / experience | New grad / 0–2 years; preferred years never reject |
-| Location & employment | U.S. only; Full-time / Contract / Internship / Co-op |
+| Location | U.S. only, including U.S. remote |
+| Employment | Full-time / Contract / Internship / Co-op, after location passes |
 | Freshness | Last 24 hours of *elapsed* UTC time |
-| Direct URL verification | ATS / company posting only |
+| Direct URL verification | Official ATS or company posting only |
 | H-1B evidence | Historical + current language, never a filter |
 | Deduplication | `company + job_id`, else title+location+URL |
 | Quality control | Schema, URL, evidence labelling |
-| Output / tracking | XLSX + SMTP summary |
-
-One company or source failing is recorded in the run summary and skipped. The rest of the run continues.
+| Job intelligence / critic | Optional resume comparison. Skipped when no private profile exists. Does not accept or reject. |
+| Output / tracking | XLSX + optional SMTP summary |
 
 ---
 
@@ -91,16 +103,16 @@ Company
 
 **Structured ATS boards are tier 1.** Jobright is an optional aggregator, not the foundation. One source or company failing does not stop the run. A successful query that returns zero jobs is recorded separately from a source failure.
 
-Automatic ATS detection (`src/services/ats_discovery.py`) reads a company's public `careers_url` (redirects, canonical links, HTML, embedded JSON, known ATS URL patterns). Identifiers are extracted from real URLs only — never guessed from the company name. Successful detections are cached in `config/ats_registry.yaml`. Failed detections are cached without an identifier so they can be retried. Manual `ats` overrides always win.
+Automatic ATS detection (`src/services/ats_discovery.py`) reads a company's public `careers_url` (redirects, canonical links, HTML, embedded JSON, known ATS URL patterns). Identifiers are extracted from real URLs only — never guessed from the company name. `config/ats_registry.yaml` is static repository configuration. Production sets `persist_ats_registry: false`, so the daily run does not rewrite it. Manual `ats` overrides always win.
 
 ### Registry files
 
 | File | Role |
 | --- | --- |
 | `config/companies.yaml` | Production company universe. Enabled entries are crawled. Manual `ats` blocks are the source of truth. |
-| `config/ats_registry.yaml` | Local cache of automatically discovered ATS type/identifier. No secrets, no job listings. |
+| `config/ats_registry.yaml` | Static ATS identifiers read during discovery. Production does not rewrite this file. No secrets, no job listings. |
 
-The enabled production set is a verified initial registry (Greenhouse / Lever / Ashby / Workday boards that returned real public JSON). Unverified Fortune 500 names remain in `companies.yaml` with `enabled: false` so they can be turned on later without being deleted.
+The production set includes verified Greenhouse / Lever / Ashby / Workday boards and the Fortune 500 official career pages in `companies.yaml`. Companies without a verified job-board id are scraped from their `careers_url`.
 
 ```yaml
   - name: Example Company
@@ -200,7 +212,23 @@ LLM_PROVIDER=gemini
 GEMINI_API_KEY=<secret>
 ```
 
-Set `LLM_PROVIDER=none` (or leave the key empty) to run fully deterministically. Ambiguous cases then stay `UNKNOWN` / rejected by the relevant *eligibility* filter — never guessed.
+Set `LLM_PROVIDER=none`, or leave the key empty, to run without Gemini. Deterministic software-engineering accepts and deterministic rejects still complete.
+
+Role outcomes stay in three internal states:
+
+| State | Meaning |
+| --- | --- |
+| `DETERMINISTIC_ACCEPT` | Clear software-engineering work. Gemini is not called. |
+| `DETERMINISTIC_REJECT` | Clear non-match, such as an account-manager or manager title. Recorded as `ROLE_MISMATCH`. Gemini is not called. |
+| `SEMANTIC_REVIEW_REQUIRED` | Ambiguous family (AI, ML, data, analytics, QA/test, or other unclear titles). Gemini is called only when the circuit allows it. |
+
+Semantic results are `ACCEPT`, `REJECT`, `UNCERTAIN`, or `UNAVAILABLE`. Only `ACCEPT` with confidence at least 0.6 can advance. `UNCERTAIN` does not qualify. Confidence 0.59 stays `UNCERTAIN`. `UNAVAILABLE` is not `ROLE_MISMATCH`.
+
+`SEMANTIC_REVIEW_UNAVAILABLE` means the model was not able to review the posting. It does not mean the posting was rejected. A large unavailable count during an outage is not a large role-mismatch count. Fresh postings are counted separately, so a fresh deterministic reject is not reported as a fresh job waiting on Gemini.
+
+The in-process circuit opens after repeated provider failures and does not retry every ambiguous posting while it is open. A later successful probe can close it. A new process starts closed. Gemini cannot modify job id, source, official URL, posted timestamp, date source, location, or freshness. Those fields are restored before a semantic accept is kept.
+
+An unavailable Gemini call, a missing API key, or an open circuit does not fail the daily run.
 
 ---
 
@@ -237,6 +265,8 @@ pip install -e ".[dev]"
 
 Copy `.env.example` to `.env` and fill in secrets. `.env` is git-ignored.
 
+`data/candidate/resume.pdf` and `data/candidate/profile.json` are optional private files. They are git-ignored. `python -m src.main` does not require them. Without a saved profile, job intelligence and the critic are skipped and the rest of the pipeline still runs. `--resume-smoke-test` is the command that reads the resume. Do not commit the PDF, the extracted profile, or profile history.
+
 Optional, for JS-heavy listing pages:
 
 ```bash
@@ -252,9 +282,13 @@ python -m src.main --source-health              # probe ATS/Jobright/H1BGrader +
 python -m src.main --freshness-hours 72 --diagnostic   # diagnostic only; production stays 24h
 python -m src.main --dry-run                    # pipeline + summary, no XLSX write, email skipped
 python -m src.main --company "Airbnb"
-python -m src.main --fixture-mode --dry-run
+python -m src.main --fixture-mode --dry-run --no-email
+python -m src.main --multi-source-smoke-test --sources greenhouse,workday,lever,ashby --dry-run --no-email
+python -m src.main --multi-source-browser-smoke-test --sources greenhouse,workday --dry-run --no-email
 pytest
 ```
+
+Smoke commands are dry-runs. They do not write `data/current/jobs.xlsx` or today's archive, and they do not change `workday.browser_enabled` in `config/settings.yaml`. The browser smoke turns the browser on for that process only.
 
 `--freshness-hours 72` is for debugging timestamp yield only. GitHub Actions continues to use the configured 24-hour requirement. Jobs with no posted/updated timestamp stay `UNKNOWN` and are not treated as fresh.
 
@@ -267,7 +301,7 @@ pytest
 | File | Purpose |
 | --- | --- |
 | `config/companies.yaml` | Company universe (enabled production registry + disabled Fortune 500) |
-| `config/ats_registry.yaml` | Cached automatic ATS detections (no secrets, no jobs) |
+| `config/ats_registry.yaml` | Static ATS identifiers shipped with the repo. Daily runs do not rewrite it. |
 | `config/settings.yaml` | Freshness, sources, URL policy, visa *interpretation*, LLM, output, email |
 | `config/roles.yaml` | Role families, seniority signals, H-1B role groups |
 
@@ -314,6 +348,33 @@ No secret is required for the run to succeed.
 
 A failed pipeline exits non-zero, the job fails, and the commit step does not run, so the last committed workbook stays as it was. A successful run with zero qualifying jobs is valid: it writes a header-only `data/current/jobs.xlsx` and today's archive, and those files are committed when they differ. An SMTP failure after a successful write does not fail the job, and the tracker commit still happens.
 
+The workflow does not pass smoke flags, does not enable the Workday browser, and does not enable Jobright. Secrets are repository secrets mapped to environment variables. They are not written into the workflow command line. The commit adds only `data/current` and `data/archive`.
+
+| Condition | Exit |
+| --- | --- |
+| Missing or malformed configuration | Nonzero (`2` for a missing config directory) |
+| Current workbook write fails | Nonzero (`1`). The previous workbook is left in place. |
+| Archive write fails | Nonzero. The previous current workbook and older archives are not replaced. |
+| Gemini unavailable or circuit open | `0` when the rest of the pipeline finishes |
+| SMTP missing or SMTP send fails | `0` |
+| One source fails | `0` when other sources finish and output succeeds |
+| Zero final candidates | `0` |
+
+---
+
+## Latest production example
+
+Phase 15, one production run on 2026-09-27, exit 0, runtime 280.392 seconds:
+
+* 14,695 discovered
+* 14,581 deduplicated
+* 3 fresh
+* 0 final candidates
+* 1,702 semantic reviews unavailable because the Gemini circuit was already open
+* 0 fresh jobs waiting on semantic review
+
+Those 1,702 unavailable reviews were not role mismatches. The three fresh postings were deterministic role mismatches before semantic review. Workday remained partial, including NVIDIA and Booz Allen at the public 2,000-job cap. Career-page fallback remained partial. No second production crawl is required to read this example.
+
 ---
 
 ## Email notifications
@@ -330,24 +391,31 @@ SMTP, using `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, and `NOT
 
 ---
 
-## Scraping limitations and security
+## Safety
 
-- Honour `robots.txt`. Rate-limit per host. No CAPTCHA solving, no auth bypass, no anti-bot evasion, no stealth fingerprints.
-- Scraped markup is treated as untrusted data. It is never executed.
-- Secrets live in the environment only. Logs redact API keys and passwords.
-- XLSX values that look like formulas are stored as text.
-- Site structure will change. Adapters (Jobright, H1BGrader, Workday, iCIMS) are isolated so they can be replaced.
+The daily pipeline uses public job pages and public ATS endpoints.
+
+- It does not bypass authentication, CAPTCHAs, robots rules, or rate limits.
+- It does not spoof a browser fingerprint, rotate proxies, or add stealth behavior.
+- It does not call a private Workday API and does not invent Workday facet ids. The public CXS body sends `appliedFacets: {}`, `limit: 20`, an offset, and optional `searchText`.
+- It does not submit applications or collect credentials.
+- It does not need a database, Redis, S3, or another cloud store.
+- Scraped markup is data. It is not executed as JavaScript or shell.
+- Secrets stay in the environment or in GitHub Actions secrets. Logs are not a place for API keys, SMTP passwords, or resume text.
+- The workbook has the 17 public columns listed above. It does not add semantic, debug, or LLM columns, and it does not store job descriptions.
 
 ---
 
 ## Known limitations
 
-- Many Fortune 500 career sites do not expose a public job-board API. Those companies are crawled best-effort from `careers_url` and will often appear as isolated failures until you add a verified `ats_type` + `ats_identifier`.
-- Jobright listings are JS-hydrated. Static HTML has `__NEXT_DATA__` but no job objects; Playwright Chromium is required to parse live cards. GitHub Actions installs Chromium. Locally: `python -m playwright install chromium`. Jobright remains optional.
-- Some Workday site URLs are stale (for example Elevance `ELV_EXT` currently 404s). Those are recorded as structured `ERROR` and career-page fallback runs. Replacement identifiers are not guessed.
-- Freshness requires a posted or updated timestamp. Postings with no date are not assumed to be new.
-- Gemini is optional. Without an API key the pipeline stays deterministic.
+- Workday discovery is partial. The public CXS page size is 20 and a board stops at 2,000 unfiltered jobs. NVIDIA and Booz Allen stay incomplete at that cap even after the existing `searchText` partitions. A 404 tenant is a failure for that tenant, not a reason to guess a new site id. Browser discovery stays off in production.
+- Career-page fallback is partial. Some companies fail, some pages are unsupported or blocked, and many rows have no timestamp. A company that returns zero jobs without an error, such as AMD's current career result, is an empty success. iCIMS is not a production collector.
+- Jobright is disabled in production. Its listing pages are JS-heavy and detail pages have returned 403. The workflow does not enable it.
+- Greenhouse, Lever, and Ashby cover only companies with a verified public board id.
+- Freshness requires a posted timestamp, or an updated timestamp when the posted time is missing. A discovery timestamp is never treated as the posted time. Unknown dates are not fresh.
+- Gemini is optional. During an outage, ambiguous roles stay unreviewed. They are not silently accepted or silently labeled role mismatches.
 - Historical H-1B/LCA rows describe what an employer did in past fiscal years. They are not a prediction about the current requisition.
+- GitHub Actions cron can start later than 12:00 UTC. A local simulation of the workflow is not a hosted Actions run.
 
 ---
 

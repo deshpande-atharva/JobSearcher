@@ -16,7 +16,7 @@ from src.models.config import CompanyConfig
 from src.models.job import DateSource, RawJobPosting
 from src.sources.base import DiscoverySource, SourceError
 from src.sources.fixtures import FixtureStore, slugify
-from src.sources.parsing import pick
+from src.sources.parsing import collect_postings, pick
 from src.utils.dates import parse_datetime
 from src.utils.normalization import clean_text, html_to_text
 
@@ -51,8 +51,11 @@ class GreenhouseSource(DiscoverySource):
         if not isinstance(jobs, list):
             raise SourceError(f"unexpected Greenhouse payload for board {token!r}")
 
-        postings = [self._to_posting(entry, company, token) for entry in jobs]
-        return [posting for posting in postings if posting is not None]
+        return collect_postings(
+            jobs,
+            lambda entry: self._to_posting(entry, company, token),
+            log=self.log,
+        )
 
     def _to_posting(
         self, entry: Any, company: CompanyConfig, token: str
@@ -125,5 +128,11 @@ class GreenhouseSource(DiscoverySource):
             posted_at=posted_at,
             updated_at=updated_at,
             date_source=date_source,
-            provenance={"ats": "greenhouse", "board_token": token},
+            provenance={
+                "ats": "greenhouse",
+                "board_token": token,
+                "discovery_method": "structured",
+                "canonical_source": "greenhouse",
+                "discovered_from": ["greenhouse"],
+            },
         )

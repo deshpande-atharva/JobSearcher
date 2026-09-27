@@ -30,6 +30,14 @@ async def run_seniority(state: PipelineState) -> None:
         job.required_years_min = verdict.min_years
         job.required_years_max = verdict.max_years
 
+        if not verdict.needs_llm:
+            note = getattr(llm, "note_deterministic_avoided", None)
+            if callable(note):
+                note()
+        elif not llm.can_call():
+            note = getattr(llm, "note_unavailable", None)
+            if callable(note):
+                note()
         if verdict.needs_llm and llm.can_call():
             required, preferred = split_required_and_preferred(job.description)
             llm_result = await _ask_llm(job, required, preferred, llm, state)

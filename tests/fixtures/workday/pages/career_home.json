@@ -1,0 +1,12 @@
+{
+  "id": "career_home",
+  "url": "https://nvidia.wd5.myworkdayjobs.com/en-US/NVIDIAExternalCareerSite",
+  "title": "NVIDIA Careers",
+  "visible_text": "Search for jobs",
+  "buttons": [{"id": "btn_search", "text": "Search Jobs", "role": "button"}],
+  "links": [],
+  "inputs": [{"id": "in_search", "text": "Search for jobs", "role": "textbox", "value": ""}],
+  "selects": [{"id": "sel_loc", "text": "Location", "role": "combobox", "options": ["United States"]}],
+  "job_cards": [],
+  "transitions": {"btn_search": "search_results"}
+}

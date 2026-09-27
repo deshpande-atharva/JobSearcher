@@ -42,6 +42,12 @@ def test_job_id_preserved_from_url() -> None:
     assert extract_job_id("https://jobs.lever.co/acme/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee") == (
         "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
     )
+    assert extract_job_id(
+        "https://nvidia.wd5.myworkdayjobs.com/en-US/NVIDIAExternalCareerSite/job/Santa-Clara/Software-Engineer_JR1001"
+    ) == "JR1001"
+    assert extract_job_id(
+        "https://nvidia.wd5.myworkdayjobs.com/en-US/NVIDIAExternalCareerSite/job/US-CA-Santa-Clara/Title_JR2001099-1"
+    ) == "JR2001099-1"
 
 
 def test_generic_careers_homepage() -> None:

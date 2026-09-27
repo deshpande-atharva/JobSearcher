@@ -48,15 +48,21 @@ def html_to_text(raw: str | None) -> str:
     """Flatten an HTML fragment into readable plain text.
 
     Scraped markup is treated strictly as data: tags are stripped, nothing is
-    executed, and no external references are followed.
+    executed, and no external references are followed. Greenhouse returns the
+    description HTML-escaped, so entities are decoded before tags are removed.
     """
     if not raw:
         return ""
-    text = _SCRIPT_STYLE_RE.sub(" ", raw)
+    text = raw
+    for _ in range(2):
+        decoded = html.unescape(text)
+        if decoded == text:
+            break
+        text = decoded
+    text = _SCRIPT_STYLE_RE.sub(" ", text)
     text = _BR_RE.sub("\n", text)
     text = _BLOCK_BREAK_RE.sub("\n", text)
     text = _TAG_RE.sub(" ", text)
-    text = html.unescape(text)
     text = text.replace("\r\n", "\n").replace("\r", "\n")
     text = _WS_RE.sub(" ", text)
     text = "\n".join(line.strip() for line in text.split("\n"))
@@ -251,6 +257,7 @@ _NON_US_TOKENS = (
     "sao paulo",
     "argentina",
     "united kingdom",
+    "uk",
     "england",
     "london",
     "manchester",
@@ -351,6 +358,7 @@ _NON_US_TOKENS = (
     "turkey",
     "istanbul",
     "emea",
+    "europe",
     "apac",
     "latam",
 )
@@ -399,6 +407,21 @@ def detect_remote_type(*texts: str | None) -> RemoteType:
     return RemoteType.UNKNOWN
 
 
+def _us_country_token(lowered: str) -> bool:
+    """True when the text itself names the United States.
+
+    "North America" contains "america" but does not establish a U.S. location.
+    "United States" still does, even when North America is also present.
+    """
+    for token in _US_COUNTRY_TOKENS:
+        if token not in lowered:
+            continue
+        if token == "america" and re.search(r"\bnorth america\b", lowered):
+            continue
+        return True
+    return False
+
+
 def normalize_location(raw: str | None, *, description: str | None = None) -> LocationInfo:
     """Parse a location string into city/state plus U.S. and remote signals.
 
@@ -433,18 +456,35 @@ def normalize_location(raw: str | None, *, description: str | None = None) -> Lo
     candidate = re.sub(
         r"^\s*(?:remote|hybrid|on-?site)\s*[-\u2013:|,]\s*", "", text, flags=re.IGNORECASE
     )
-    # Use the first segment when several locations are listed.
-    first_segment = re.split(r"\s*(?:;|\bor\b|\||/)\s*", candidate)[0].strip()
+    # A U.S. office later in a multi-location string still makes the job
+    # U.S.-eligible. The first segment is preferred for the city display.
+    segments = [
+        part.strip()
+        for part in re.split(r"\s*(?:;|\bor\b|\||/|\+)\s*", candidate)
+        if part.strip()
+    ] or [candidate.strip()]
 
-    match = _CITY_STATE_RE.search(first_segment)
-    if match:
+    def _state_from(segment: str) -> tuple[str | None, str | None]:
+        match = _CITY_STATE_RE.search(segment)
+        if not match:
+            return None, None
         raw_city = match.group(1).strip()
         raw_state = match.group(2).strip()
         upper_state = raw_state.upper()
         if upper_state in US_STATE_ABBREVIATIONS:
-            city, state = raw_city, upper_state
-        elif raw_state.lower() in _STATE_NAME_TO_ABBREV:
-            city, state = raw_city, _STATE_NAME_TO_ABBREV[raw_state.lower()]
+            return raw_city, upper_state
+        mapped = _STATE_NAME_TO_ABBREV.get(raw_state.lower())
+        if mapped:
+            return raw_city, mapped
+        return None, None
+
+    city, state = _state_from(segments[0])
+    if state is None:
+        for segment in segments[1:]:
+            later_city, later_state = _state_from(segment)
+            if later_state:
+                city, state = later_city, later_state
+                break
 
     if state is None:
         # A bare state name anywhere in the string, e.g. "Texas, United States".
@@ -453,7 +493,7 @@ def normalize_location(raw: str | None, *, description: str | None = None) -> Lo
                 state = abbrev
                 break
 
-    has_us_country_token = any(token in lowered for token in _US_COUNTRY_TOKENS) or bool(
+    has_us_country_token = _us_country_token(lowered) or bool(
         re.search(r"\b(?:us|usa|u\.s\.a?\.?)\b", lowered)
     )
     has_non_us_token = any(
@@ -461,8 +501,8 @@ def normalize_location(raw: str | None, *, description: str | None = None) -> Lo
     )
 
     is_us = bool(state) or has_us_country_token
-    # "Remote" with a U.S. country token is a U.S. remote role. Bare "Remote"
-    # stays unknown-country and is resolved later by the location agent.
+    # "Remote - United States" is U.S. Bare "Remote" and "Remote - North America"
+    # stay unknown. Company headquarters is never used as location evidence.
     is_international_only = has_non_us_token and not is_us
 
     return LocationInfo(
@@ -739,6 +779,37 @@ def _scan_years(text: str) -> tuple[float | None, float | None, list[str]]:
     return min_years, max_years, quotes[:5]
 
 
+_WEAK_ENTRY_SIGNALS = {"junior", "intern", "internship", "apprentice", "co-op", "coop"}
+_JUNIOR_AS_OTHERS = re.compile(
+    r"\b(?:mentor(?:ing)?|leading|lead|with|for|of|manage|managing)\s+(?:\w+\s+){0,4}junior\b",
+    re.IGNORECASE,
+)
+_SENIOR_TITLE = re.compile(
+    r"\b(?:senior|staff|principal|director|architect|manager|lead|head)\b",
+    re.IGNORECASE,
+)
+
+
+def _entry_signal_present(signal: str, blob: str) -> bool:
+    """Match an entry-level phrase as a word, not as a substring of another word."""
+    token = signal.lower().strip()
+    if not token:
+        return False
+    if not re.search(rf"(?<!\w){re.escape(token)}(?!\w)", blob):
+        return False
+    if token == "junior":
+        stripped = _JUNIOR_AS_OTHERS.sub(" ", blob)
+        if re.search(r"(?<!\w)junior(?!\w)", stripped) is None:
+            return False
+    if token in _WEAK_ENTRY_SIGNALS:
+        title = blob.split("\n", 1)[0]
+        # "Junior" does not override Senior/Staff/Lead in the same title.
+        # An explicit 0-2 year requirement is handled before this signal.
+        if _SENIOR_TITLE.search(title):
+            return False
+    return True
+
+
 def extract_experience_requirement(
     description: str | None,
     *,
@@ -753,7 +824,7 @@ def extract_experience_requirement(
     required_text, preferred_text = split_required_and_preferred(description)
     blob = f"{title or ''}\n{description or ''}".lower()
 
-    found_signals = [signal for signal in entry_level_signals if signal and signal.lower() in blob]
+    found_signals = [signal for signal in entry_level_signals if signal and _entry_signal_present(signal, blob)]
 
     min_years, max_years, required_quotes = _scan_years(required_text)
     preferred_min, _, preferred_quotes = _scan_years(preferred_text)

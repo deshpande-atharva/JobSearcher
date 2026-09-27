@@ -1,0 +1,260 @@
+# Workday qualification fixtures. Dates are applied by the test.
+# Expectations name the existing filter that should reject the posting.
+cases:
+  - id: early
+    title: Software Engineer
+    job_id: JR3001
+    location: Santa Clara, CA
+    employment: Full-time
+    freshness: fresh
+    expect: accept
+    description: |
+      Minimum Qualifications
+      0-2 years of experience.
+      Java required.
+      BS in Computer Science or Engineering.
+
+  - id: duplicate
+    title: Software Engineer
+    job_id: JR3001
+    location: Santa Clara, CA
+    employment: Full-time
+    freshness: fresh
+    expect: duplicate
+    description: |
+      Minimum Qualifications
+      0-2 years of experience.
+      Java required.
+
+  - id: same-title
+    title: Software Engineer
+    job_id: JR3002
+    location: Santa Clara, CA
+    employment: Full-time
+    freshness: fresh
+    expect: accept
+    description: |
+      Minimum Qualifications
+      0-2 years of experience.
+      Java required.
+
+  - id: swe-ii
+    title: Software Engineer II
+    job_id: JR3003
+    location: Santa Clara, CA
+    employment: Full-time
+    freshness: fresh
+    expect: accept
+    description: |
+      Minimum Qualifications
+      0-1 years of experience.
+      Java required.
+
+  - id: senior
+    title: Senior Software Engineer
+    job_id: JR3004
+    location: Santa Clara, CA
+    employment: Full-time
+    freshness: fresh
+    expect: seniority
+    description: |
+      Minimum Qualifications
+      5+ years of experience.
+      Java required.
+
+  - id: staff
+    title: Staff Software Engineer
+    job_id: JR3005
+    location: Santa Clara, CA
+    employment: Full-time
+    freshness: fresh
+    expect: seniority
+    description: |
+      Minimum Qualifications
+      6+ years of experience.
+
+  - id: principal
+    title: Principal Software Engineer
+    job_id: JR3006
+    location: Santa Clara, CA
+    employment: Full-time
+    freshness: fresh
+    expect: seniority
+    description: |
+      Minimum Qualifications
+      7+ years of experience.
+
+  - id: manager
+    title: Engineering Manager
+    job_id: JR3007
+    location: Santa Clara, CA
+    employment: Full-time
+    freshness: fresh
+    expect: role
+    description: |
+      Minimum Qualifications
+      0-1 years of experience.
+      Java required.
+
+  - id: architect
+    title: Solutions Architect
+    job_id: JR3008
+    location: Santa Clara, CA
+    employment: Full-time
+    freshness: fresh
+    expect: role
+    description: |
+      Minimum Qualifications
+      0-2 years of experience.
+      Build production services and ship code.
+
+  - id: international
+    title: Software Engineer
+    job_id: JR3009
+    location: London, United Kingdom
+    employment: Full-time
+    freshness: fresh
+    expect: location
+    description: |
+      Minimum Qualifications
+      0-2 years of experience.
+
+  - id: us-remote
+    title: Backend Engineer
+    job_id: JR3010
+    location: Remote - United States
+    employment: Full-time
+    freshness: fresh
+    expect: accept
+    description: |
+      Minimum Qualifications
+      0-2 years of experience.
+      Java required.
+
+  - id: unknown-location
+    title: Software Engineer
+    job_id: JR3011
+    location: "5 Locations"
+    employment: Full-time
+    freshness: fresh
+    expect: location
+    description: |
+      Minimum Qualifications
+      0-2 years of experience.
+
+  - id: fresh
+    title: Full Stack Engineer
+    job_id: JR3012
+    location: Austin, TX
+    employment: Full-time
+    freshness: fresh
+    expect: accept
+    description: |
+      Minimum Qualifications
+      New grad.
+      0-2 years of experience.
+
+  - id: stale
+    title: Software Engineer
+    job_id: JR3013
+    location: Santa Clara, CA
+    employment: Full-time
+    freshness: stale
+    expect: freshness
+    description: |
+      Minimum Qualifications
+      0-2 years of experience.
+
+  - id: unknown-date
+    title: Software Engineer
+    job_id: JR3014
+    location: Santa Clara, CA
+    employment: Full-time
+    freshness: unknown
+    expect: freshness
+    description: |
+      Minimum Qualifications
+      0-2 years of experience.
+
+  - id: required-one
+    title: Platform Engineer
+    job_id: JR3015
+    location: Seattle, WA
+    employment: Full-time
+    freshness: fresh
+    expect: accept
+    description: |
+      Minimum Qualifications
+      1 year of experience.
+      Java required.
+
+  - id: preferred-five
+    title: Cloud Engineer
+    job_id: JR3016
+    location: Denver, CO
+    employment: Full-time
+    freshness: fresh
+    expect: accept
+    description: |
+      Minimum Qualifications
+      1 year of experience.
+      Preferred Qualifications
+      5+ years of experience.
+
+  - id: sponsorship-absent
+    title: Infrastructure Engineer
+    job_id: JR3017
+    location: Santa Clara, CA
+    employment: Full-time
+    freshness: fresh
+    expect: accept
+    description: |
+      Minimum Qualifications
+      0-2 years of experience.
+      Java required.
+
+  - id: sponsorship-present
+    title: DevOps Engineer
+    job_id: JR3018
+    location: Santa Clara, CA
+    employment: Full-time
+    freshness: fresh
+    expect: accept
+    description: |
+      Minimum Qualifications
+      0-2 years of experience.
+      H-1B sponsorship is available.
+
+  - id: sponsorship-unknown
+    title: Systems Engineer
+    job_id: JR3019
+    location: Santa Clara, CA
+    employment: Full-time
+    freshness: fresh
+    expect: accept
+    description: |
+      Minimum Qualifications
+      0-2 years of experience.
+      Sponsorship may be considered.
+
+  - id: contract
+    title: Software Engineer
+    job_id: JR3020
+    location: Santa Clara, CA
+    employment: Contract
+    freshness: fresh
+    expect: accept
+    description: |
+      Minimum Qualifications
+      0-2 years of experience.
+
+  - id: part-time
+    title: Software Engineer
+    job_id: JR3021
+    location: Santa Clara, CA
+    employment: Part-time
+    freshness: fresh
+    expect: employment
+    description: |
+      Minimum Qualifications
+      0-2 years of experience.

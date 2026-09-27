@@ -1,4 +1,193 @@
 companies:
+  accenture:
+    ats_type: workday
+    ats_identifier: https://accenture.wd103.myworkdayjobs.com/AccentureCareers/userHome&#34;,&#34;analytics-engagement&#34;:&#34;true&#34;,&#34;analytics-link-type&#34;:&#34;engagement&#34;,&#34;analytics-link-name&#34;:&#34;Access
+    discovered_at: '2026-09-26T23:04:49.485959Z'
+    discovery_method: automatic
+    careers_url: https://www.accenture.com/us-en/careers/jobsearch
+    confidence: 0.8
+  advanced micro devices:
+    ats_type: icims
+    ats_identifier: https://internal-amd.icims.com/jobs/search?back=none&amp;redirect=search\
+    discovered_at: '2026-09-26T23:03:09.272130Z'
+    discovery_method: automatic
+    careers_url: https://careers.amd.com/careers-home
+    confidence: 0.8
+  alphabet:
+    ats_type: null
+    ats_identifier: null
+    discovered_at: '2026-09-26T23:02:04.794911Z'
+    discovery_method: failed
+    careers_url: https://www.google.com/about/careers/applications/jobs/results/
+    confidence: null
+  amazon:
+    ats_type: null
+    ats_identifier: null
+    discovered_at: '2026-09-26T23:01:30.140896Z'
+    discovery_method: failed
+    careers_url: https://www.amazon.jobs/
+    confidence: null
+  american express:
+    ats_type: null
+    ats_identifier: null
+    discovered_at: '2026-09-26T23:03:57.465078Z'
+    discovery_method: failed
+    careers_url: https://www.americanexpress.com/en-us/careers/
+    confidence: null
+  apple:
+    ats_type: null
+    ats_identifier: null
+    discovered_at: '2026-09-26T23:01:54.529891Z'
+    discovery_method: failed
+    careers_url: https://jobs.apple.com/en-us/search
+    confidence: null
+  at and t:
+    ats_type: workday
+    ats_identifier: https://att.wd1.myworkdayjobs.com/en-US/ATTGeneral/login
+    discovered_at: '2026-09-26T23:04:35.630118Z'
+    discovery_method: automatic
+    careers_url: https://www.att.jobs/search-jobs
+    confidence: 0.8
+  atlassian:
+    ats_type: null
+    ats_identifier: null
+    discovered_at: '2026-09-26T23:05:20.682239Z'
+    discovery_method: failed
+    careers_url: https://www.atlassian.com/company/careers
+    confidence: null
+  autodesk:
+    ats_type: null
+    ats_identifier: null
+    discovered_at: '2026-09-26T23:05:21.233146Z'
+    discovery_method: failed
+    careers_url: https://www.autodesk.com/careers/overview
+    confidence: null
+  bank of america:
+    ats_type: workday
+    ats_identifier: https://ghr.wd1.myworkdayjobs.com/en-us/lateral-us/login
+    discovered_at: '2026-09-26T23:03:52.103570Z'
+    discovery_method: automatic
+    careers_url: https://careers.bankofamerica.com/en-us/job-search
+    confidence: 0.8
+  block:
+    ats_type: null
+    ats_identifier: null
+    discovered_at: '2026-09-26T23:03:51.077440Z'
+    discovery_method: failed
+    careers_url: https://block.xyz/careers/jobs
+    confidence: null
+  boeing:
+    ats_type: workday
+    ats_identifier: https://boeing.wd1.myworkdayjobs.com/en-US/EXTERNAL_CAREERS/login
+    discovered_at: '2026-09-26T23:04:21.391303Z'
+    discovery_method: automatic
+    careers_url: https://jobs.boeing.com/
+    confidence: 0.8
+  booz allen hamilton:
+    ats_type: workday
+    ats_identifier: https://bah.wd1.myworkdayjobs.com/BAH_Jobs
+    discovered_at: '2026-09-26T23:04:53.980104Z'
+    discovery_method: automatic
+    careers_url: https://careers.boozallen.com/careers
+    confidence: 0.8
+  cisco systems:
+    ats_type: null
+    ats_identifier: null
+    discovered_at: '2026-09-26T23:03:09.515206Z'
+    discovery_method: failed
+    careers_url: https://jobs.cisco.com/jobs/SearchJobs
+    confidence: null
+  citigroup:
+    ats_type: workday
+    ats_identifier: https://citi.wd5.myworkdayjobs.com/en-US/2/userHome
+    discovered_at: '2026-09-26T23:03:55.186497Z'
+    discovery_method: automatic
+    careers_url: https://jobs.citi.com/search-jobs
+    confidence: 0.8
+  cloudflare:
+    ats_type: null
+    ats_identifier: null
+    discovered_at: '2026-09-26T23:04:54.026441Z'
+    discovery_method: failed
+    careers_url: https://www.cloudflare.com/careers/
+    confidence: null
+  comcast:
+    ats_type: null
+    ats_identifier: null
+    discovered_at: '2026-09-26T23:04:47.944092Z'
+    discovery_method: failed
+    careers_url: https://jobs.comcast.com/jobs
+    confidence: null
+  costco wholesale:
+    ats_type: null
+    ats_identifier: null
+    discovered_at: '2026-09-26T23:01:40.866242Z'
+    discovery_method: failed
+    careers_url: https://www.costco.com/careers.html
+    confidence: null
+  crowdstrike:
+    ats_type: workday
+    ats_identifier: https://crowdstrike.wd5.myworkdayjobs.com/crowdstrikecareers
+    discovered_at: '2026-09-26T23:05:17.858308Z'
+    discovery_method: automatic
+    careers_url: https://www.crowdstrike.com/en-us/careers/
+    confidence: 0.8
+  cvs health:
+    ats_type: null
+    ats_identifier: null
+    discovered_at: '2026-09-26T23:04:20.457680Z'
+    discovery_method: failed
+    careers_url: https://jobs.cvshealth.com/
+    confidence: null
+  databricks:
+    ats_type: null
+    ats_identifier: null
+    discovered_at: '2026-09-26T23:05:14.853139Z'
+    discovery_method: failed
+    careers_url: https://www.databricks.com/company/careers
+    confidence: null
+  datadog:
+    ats_type: null
+    ats_identifier: null
+    discovered_at: '2026-09-26T23:05:16.344195Z'
+    discovery_method: failed
+    careers_url: https://careers.datadoghq.com
+    confidence: null
+  deere and:
+    ats_type: null
+    ats_identifier: null
+    discovered_at: '2026-09-26T23:04:33.527581Z'
+    discovery_method: failed
+    careers_url: https://careers.deere.com/careers
+    confidence: null
+  dell:
+    ats_type: null
+    ats_identifier: null
+    discovered_at: '2026-09-26T23:03:12.990239Z'
+    discovery_method: failed
+    careers_url: https://jobs.dell.com/
+    confidence: null
+  deloitte:
+    ats_type: null
+    ats_identifier: null
+    discovered_at: '2026-09-26T23:04:52.683992Z'
+    discovery_method: failed
+    careers_url: https://apply.deloitte.com/careers
+    confidence: null
+  docusign:
+    ats_type: icims
+    ats_identifier: https://www.icims.com/legal/privacy-notice-website/
+    discovered_at: '2026-09-26T23:05:13.395200Z'
+    discovery_method: automatic
+    careers_url: https://careers.docusign.com/careers-home
+    confidence: 0.8
+  elastic:
+    ats_type: null
+    ats_identifier: null
+    discovered_at: '2026-09-26T23:05:24.157338Z'
+    discovery_method: failed
+    careers_url: https://www.elastic.co/careers
+    confidence: null
   elevance health:
     ats_type: workday
     ats_identifier: https://elevancehealth.wd1.myworkdayjobs.com/en-US/ELV_EXT
@@ -6,10 +195,332 @@ companies:
     discovery_method: automatic
     careers_url: https://elevancehealth.wd1.myworkdayjobs.com/en-US/ELV_EXT
     confidence: 1.0
+  fastly:
+    ats_type: null
+    ats_identifier: null
+    discovered_at: '2026-09-26T23:05:13.839179Z'
+    discovery_method: failed
+    careers_url: https://www.fastly.com/about/careers
+    confidence: null
+  fedex:
+    ats_type: null
+    ats_identifier: null
+    discovered_at: '2026-09-26T23:04:49.694583Z'
+    discovery_method: failed
+    careers_url: https://careers.fedex.com/
+    confidence: null
+  fidelity investments:
+    ats_type: null
+    ats_identifier: null
+    discovered_at: '2026-09-26T23:04:05.359248Z'
+    discovery_method: failed
+    careers_url: https://www.fidelity.com/about-fidelity/careers
+    confidence: null
+  ford motor:
+    ats_type: null
+    ats_identifier: null
+    discovered_at: '2026-09-26T23:04:30.034435Z'
+    discovery_method: failed
+    careers_url: https://corporate.ford.com/careers.html
+    confidence: null
+  general motors:
+    ats_type: null
+    ats_identifier: null
+    discovered_at: '2026-09-26T23:04:28.634668Z'
+    discovery_method: failed
+    careers_url: https://search-careers.gm.com/en/jobs/
+    confidence: null
+  goldman sachs:
+    ats_type: null
+    ats_identifier: null
+    discovered_at: '2026-09-26T23:03:54.865101Z'
+    discovery_method: failed
+    careers_url: https://higher.gs.com/results
+    confidence: null
+  hewlett packard enterprise:
+    ats_type: null
+    ats_identifier: null
+    discovered_at: '2026-09-26T23:03:30.800375Z'
+    discovery_method: failed
+    careers_url: https://careers.hpe.com/us/en
+    confidence: null
+  honeywell:
+    ats_type: null
+    ats_identifier: null
+    discovered_at: '2026-09-26T23:04:34.986640Z'
+    discovery_method: failed
+    careers_url: https://careers.honeywell.com/us/en/search-results
+    confidence: null
+  hubspot:
+    ats_type: null
+    ats_identifier: null
+    discovered_at: '2026-09-26T23:04:58.721418Z'
+    discovery_method: failed
+    careers_url: https://www.hubspot.com/careers
+    confidence: null
+  ibm:
+    ats_type: null
+    ats_identifier: null
+    discovered_at: '2026-09-26T23:02:55.380516Z'
+    discovery_method: failed
+    careers_url: https://www.ibm.com/careers/search
+    confidence: null
+  intel:
+    ats_type: workday
+    ats_identifier: https://intel.wd1.myworkdayjobs.com/External/page/6042070b79e01001f04fa9b468070000
+    discovered_at: '2026-09-26T23:02:19.801976Z'
+    discovery_method: automatic
+    careers_url: https://jobs.intel.com/en
+    confidence: 1.0
+  intuit:
+    ats_type: null
+    ats_identifier: null
+    discovered_at: '2026-09-26T23:04:58.481539Z'
+    discovery_method: failed
+    careers_url: https://www.intuit.com/careers/
+    confidence: null
+  johnson and johnson:
+    ats_type: null
+    ats_identifier: null
+    discovered_at: '2026-09-26T23:04:18.552243Z'
+    discovery_method: failed
+    careers_url: https://www.careers.jnj.com/en/jobs/
+    confidence: null
+  jpmorgan chase:
+    ats_type: null
+    ats_identifier: null
+    discovered_at: '2026-09-26T23:03:51.452417Z'
+    discovery_method: failed
+    careers_url: https://careers.jpmorgan.com/us/en/search-results
+    confidence: null
+  leidos:
+    ats_type: null
+    ats_identifier: null
+    discovered_at: '2026-09-26T23:04:52.667993Z'
+    discovery_method: failed
+    careers_url: https://careers.leidos.com/search/jobs
+    confidence: null
+  liberty mutual:
+    ats_type: null
+    ats_identifier: null
+    discovered_at: '2026-09-26T23:04:16.528892Z'
+    discovery_method: failed
+    careers_url: https://jobs.libertymutualgroup.com/
+    confidence: null
+  lockheed martin:
+    ats_type: null
+    ats_identifier: null
+    discovered_at: '2026-09-26T23:04:24.650024Z'
+    discovery_method: failed
+    careers_url: https://www.lockheedmartinjobs.com/search-jobs
+    confidence: null
+  lowe s:
+    ats_type: null
+    ats_identifier: null
+    discovered_at: '2026-09-26T23:01:52.282216Z'
+    discovery_method: failed
+    careers_url: https://talent.lowes.com/us/en
+    confidence: null
+  mastercard:
+    ats_type: workday
+    ats_identifier: https://mastercard.wd1.myworkdayjobs.com/CorporateCareers/job/Purchase-New-York/Vice-President---Open-Finance-Sales_R-288138/apply
+    discovered_at: '2026-09-26T23:04:03.590804Z'
+    discovery_method: automatic
+    careers_url: https://careers.mastercard.com/us/en/search-results
+    confidence: 0.8
+  meta:
+    ats_type: null
+    ats_identifier: null
+    discovered_at: '2026-09-26T23:02:17.572159Z'
+    discovery_method: failed
+    careers_url: https://www.metacareers.com/jobs
+    confidence: null
+  microsoft:
+    ats_type: null
+    ats_identifier: null
+    discovered_at: '2026-09-26T23:02:02.751001Z'
+    discovery_method: failed
+    careers_url: https://jobs.careers.microsoft.com/global/en/search
+    confidence: null
+  mongodb:
+    ats_type: null
+    ats_identifier: null
+    discovered_at: '2026-09-26T23:05:08.179794Z'
+    discovery_method: failed
+    careers_url: https://www.mongodb.com/company/careers
+    confidence: null
+  morgan stanley:
+    ats_type: null
+    ats_identifier: null
+    discovered_at: '2026-09-26T23:03:55.449687Z'
+    discovery_method: failed
+    careers_url: https://www.morganstanley.com/careers/career-opportunities-search
+    confidence: null
+  netflix:
+    ats_type: null
+    ats_identifier: null
+    discovered_at: '2026-09-26T23:04:49.239098Z'
+    discovery_method: failed
+    careers_url: https://explore.jobs.netflix.net/careers
+    confidence: null
+  okta:
+    ats_type: null
+    ats_identifier: null
+    discovered_at: '2026-09-26T23:05:13.588898Z'
+    discovery_method: failed
+    careers_url: https://www.okta.com/company/careers/
+    confidence: null
+  oracle:
+    ats_type: null
+    ats_identifier: null
+    discovered_at: '2026-09-26T23:02:59.090196Z'
+    discovery_method: failed
+    careers_url: https://careers.oracle.com/jobs
+    confidence: null
+  paypal:
+    ats_type: null
+    ats_identifier: null
+    discovered_at: '2026-09-26T23:03:49.629347Z'
+    discovery_method: failed
+    careers_url: https://careers.pypl.com/home/
+    confidence: null
+  pfizer:
+    ats_type: workday
+    ats_identifier: https://pfizer.wd1.myworkdayjobs.com/PfizerCareers/page/61cd8c398601100158e598894f100000
+    discovered_at: '2026-09-26T23:04:19.801888Z'
+    discovery_method: automatic
+    careers_url: https://www.pfizer.com/about/careers
+    confidence: 0.8
+  progressive:
+    ats_type: null
+    ats_identifier: null
+    discovered_at: '2026-09-26T23:04:15.316316Z'
+    discovery_method: failed
+    careers_url: https://www.progressive.com/careers/
+    confidence: null
+  qualcomm:
+    ats_type: null
+    ats_identifier: null
+    discovered_at: '2026-09-26T23:03:08.710586Z'
+    discovery_method: failed
+    careers_url: https://careers.qualcomm.com/careers
+    confidence: null
+  rtx:
+    ats_type: null
+    ats_identifier: null
+    discovered_at: '2026-09-26T23:04:27.324470Z'
+    discovery_method: failed
+    careers_url: https://careers.rtx.com/global/en/search-results
+    confidence: null
+  snowflake:
+    ats_type: null
+    ats_identifier: null
+    discovered_at: '2026-09-26T23:05:19.793576Z'
+    discovery_method: failed
+    careers_url: https://careers.snowflake.com/us/en
+    confidence: null
   stripe:
     ats_type: null
     ats_identifier: null
-    discovered_at: '2026-09-24T16:25:47.270942Z'
+    discovered_at: '2026-09-26T23:01:26.267769Z'
     discovery_method: failed
     careers_url: https://stripe.com/jobs
+    confidence: null
+  target:
+    ats_type: workday
+    ats_identifier: https://target.wd5.myworkdayjobs.com/targetcareers/login?redirect=%2Ftargetcareers%2FuserHome
+    discovered_at: '2026-09-26T23:01:42.053372Z'
+    discovery_method: automatic
+    careers_url: https://corporate.target.com/careers
+    confidence: 0.8
+  tesla:
+    ats_type: null
+    ats_identifier: null
+    discovered_at: '2026-09-26T23:04:31.793979Z'
+    discovery_method: failed
+    careers_url: https://www.tesla.com/careers/search/
+    confidence: null
+  texas instruments:
+    ats_type: null
+    ats_identifier: null
+    discovered_at: '2026-09-26T23:03:33.574143Z'
+    discovery_method: failed
+    careers_url: https://careers.ti.com/
+    confidence: null
+  the home depot:
+    ats_type: workday
+    ats_identifier: https://homedepot.wd5.myworkdayjobs.com/CareerDepot/login
+    discovered_at: '2026-09-26T23:01:51.273010Z'
+    discovery_method: automatic
+    careers_url: https://careers.homedepot.com/
+    confidence: 0.8
+  the walt disney:
+    ats_type: null
+    ats_identifier: null
+    discovered_at: '2026-09-26T23:04:49.069058Z'
+    discovery_method: failed
+    careers_url: https://jobs.disneycareers.com/search-jobs
+    confidence: null
+  uber:
+    ats_type: null
+    ats_identifier: null
+    discovered_at: '2026-09-26T23:03:48.291387Z'
+    discovery_method: failed
+    careers_url: https://www.uber.com/us/en/careers/list/
+    confidence: null
+  united parcel service:
+    ats_type: null
+    ats_identifier: null
+    discovered_at: '2026-09-26T23:04:50.010967Z'
+    discovery_method: failed
+    careers_url: https://www.jobs-ups.com/search-jobs
+    confidence: null
+  unitedhealth:
+    ats_type: null
+    ats_identifier: null
+    discovered_at: '2026-09-26T23:04:07.440382Z'
+    discovery_method: failed
+    careers_url: https://careers.unitedhealthgroup.com/
+    confidence: null
+  verizon:
+    ats_type: null
+    ats_identifier: null
+    discovered_at: '2026-09-26T23:04:47.435737Z'
+    discovery_method: failed
+    careers_url: https://www.verizon.com/about/careers/job-search
+    confidence: null
+  visa:
+    ats_type: workday
+    ats_identifier: https://visa.wd5.myworkdayjobs.com/Visa
+    discovered_at: '2026-09-26T23:04:01.130701Z'
+    discovery_method: automatic
+    careers_url: https://corporate.visa.com/en/jobs/
+    confidence: 1.0
+  walmart:
+    ats_type: null
+    ats_identifier: null
+    discovered_at: '2026-09-26T23:01:27.783735Z'
+    discovery_method: failed
+    careers_url: https://careers.walmart.com/
+    confidence: null
+  wells fargo:
+    ats_type: null
+    ats_identifier: null
+    discovered_at: '2026-09-26T23:03:53.373787Z'
+    discovery_method: failed
+    careers_url: https://www.wellsfargojobs.com/en/jobs/
+    confidence: null
+  zendesk:
+    ats_type: workday
+    ats_identifier: https://zendesk.wd1.myworkdayjobs.com/zendesk
+    discovered_at: '2026-09-26T23:05:06.502350Z'
+    discovery_method: automatic
+    careers_url: https://www.zendesk.com/company/careers/
+    confidence: 0.8
+  zoom:
+    ats_type: null
+    ats_identifier: null
+    discovered_at: '2026-09-26T23:05:05.073094Z'
+    discovery_method: failed
+    careers_url: https://careers.zoom.us/
     confidence: null

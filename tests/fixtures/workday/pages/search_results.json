@@ -1,0 +1,19 @@
+{
+  "id": "search_results",
+  "url": "https://nvidia.wd5.myworkdayjobs.com/en-US/NVIDIAExternalCareerSite?q=Software%20Engineer",
+  "title": "NVIDIA Jobs",
+  "visible_text": "Software Engineer results",
+  "buttons": [{"id": "btn_next", "text": "Next", "role": "button"}],
+  "links": [
+    {"id": "lnk_1", "text": "Software Engineer", "role": "link", "href": "https://nvidia.wd5.myworkdayjobs.com/en-US/NVIDIAExternalCareerSite/job/Santa-Clara/Software-Engineer_JR1001"},
+    {"id": "lnk_2", "text": "Backend Engineer", "role": "link", "href": "https://nvidia.wd5.myworkdayjobs.com/en-US/NVIDIAExternalCareerSite/job/Austin/Backend-Engineer_JR1002"}
+  ],
+  "inputs": [{"id": "in_search", "text": "Search for jobs", "role": "textbox", "value": "Software Engineer"}],
+  "selects": [],
+  "job_cards": [
+    {"id": "lnk_1", "title": "Software Engineer", "company": "NVIDIA", "location": "Santa Clara, CA", "url": "https://nvidia.wd5.myworkdayjobs.com/en-US/NVIDIAExternalCareerSite/job/Santa-Clara/Software-Engineer_JR1001", "job_id": "JR1001", "description": ""},
+    {"id": "lnk_2", "title": "Backend Engineer", "company": "NVIDIA", "location": "Austin, TX", "url": "https://nvidia.wd5.myworkdayjobs.com/en-US/NVIDIAExternalCareerSite/job/Austin/Backend-Engineer_JR1002", "job_id": "JR1002", "description": ""},
+    {"id": "lnk_dup", "title": "Software Engineer", "company": "NVIDIA", "location": "Santa Clara, CA", "url": "https://nvidia.wd5.myworkdayjobs.com/en-US/NVIDIAExternalCareerSite/job/Santa-Clara/Software-Engineer_JR1001", "job_id": "JR1001", "description": ""}
+  ],
+  "transitions": {"btn_next": "page_two"}
+}

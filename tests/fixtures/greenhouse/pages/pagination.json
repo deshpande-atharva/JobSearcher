@@ -1,0 +1,12 @@
+{
+  "id": "pagination",
+  "url": "https://boards.greenhouse.io/acme/jobs?start=0",
+  "title": "Open roles",
+  "visible_text": "Next",
+  "buttons": [{"id": "btn_next", "text": "Next", "role": "button"}],
+  "links": [],
+  "inputs": [],
+  "selects": [],
+  "job_cards": [],
+  "transitions": {"btn_next": "load_more"}
+}

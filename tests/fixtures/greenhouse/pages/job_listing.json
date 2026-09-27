@@ -1,0 +1,22 @@
+{
+  "id": "job_listing",
+  "url": "https://boards.greenhouse.io/acme/jobs",
+  "title": "Open roles",
+  "visible_text": "Software Engineer",
+  "buttons": [{"id": "btn_more", "text": "Load More", "role": "button"}],
+  "links": [{"id": "link_job", "text": "Software Engineer", "role": "link", "href": "https://boards.greenhouse.io/acme/jobs/1001"}],
+  "inputs": [],
+  "selects": [],
+  "job_cards": [
+    {
+      "id": "card_1001",
+      "title": "Software Engineer",
+      "company": "Acme",
+      "location": "Seattle, WA",
+      "url": "https://boards.greenhouse.io/acme/jobs/1001",
+      "job_id": "1001",
+      "description": "Build APIs in Python. 0-2 years of experience. New graduates welcome."
+    }
+  ],
+  "transitions": {"btn_more": "load_more", "link_job": "job_detail"}
+}

@@ -18,6 +18,7 @@ import asyncio
 import random
 import time
 from abc import ABC, abstractmethod
+from contextvars import ContextVar, Token
 from dataclasses import dataclass, field
 from typing import Any, ClassVar, Literal
 from urllib.parse import urljoin
@@ -46,6 +47,23 @@ __all__ = [
 log = get_logger(__name__)
 
 _RETRYABLE_STATUS = frozenset({408, 425, 429, 500, 502, 503, 504, 522, 524})
+_effort: ContextVar[dict[str, int] | None] = ContextVar("discovery_effort", default=None)
+
+
+def begin_effort() -> tuple[dict[str, int], Token]:
+    """Per-company HTTP counters. Each discovery task gets its own bucket."""
+    bucket = {"requests": 0, "retries": 0, "playwright_renders": 0}
+    return bucket, _effort.set(bucket)
+
+
+def end_effort(token: Token) -> None:
+    _effort.reset(token)
+
+
+def note_effort(kind: str) -> None:
+    bucket = _effort.get()
+    if bucket is not None:
+        bucket[kind] = int(bucket.get(kind, 0)) + 1
 
 SourceStatus = Literal["OK", "EMPTY", "ERROR", "BLOCKED", "UNSUPPORTED"]
 SOURCE_STATUSES: tuple[SourceStatus, ...] = ("OK", "EMPTY", "ERROR", "BLOCKED", "UNSUPPORTED")
@@ -303,8 +321,29 @@ class HttpClient:
             ),
         )
         self._robots = _RobotsCache(self._client, run.user_agent)
+        # Same-run GET cache. POST bodies (Workday CXS pages) are never stored.
+        # Nothing here survives the process, and a cached body is not a timestamp.
+        self._get_cache: dict[tuple[Any, ...], FetchResult] = {}
+        self._renderer: Any = None
+        self.request_count = 0
+        self.cache_hits = 0
+        self.retry_count = 0
+        self.workday_post_count = 0
+
+    @property
+    def renderer(self) -> Any:
+        """One Playwright browser for this run. Launch happens on first render."""
+        if self._renderer is None:
+            from src.sources.playwright_renderer import PlaywrightRenderer
+
+            self._renderer = PlaywrightRenderer(self._config)
+        return self._renderer
 
     async def aclose(self) -> None:
+        renderer = self._renderer
+        self._renderer = None
+        if renderer is not None:
+            await renderer.aclose()
         await self._client.aclose()
 
     async def __aenter__(self) -> HttpClient:
@@ -331,13 +370,20 @@ class HttpClient:
         Never raises for HTTP or transport problems -- the error is returned on
         the :class:`FetchResult` so one bad source cannot abort a run.
         """
-        if allow_robots_check and self._respect_robots and not await self._robots.allowed(url):
-            log.info("skipping URL disallowed by robots.txt", url=url)
-            return FetchResult(url=url, error="disallowed by robots.txt", blocked_by_robots=True)
-
         request_headers = dict(headers or {})
         if expect_json:
             request_headers.setdefault("Accept", "application/json")
+        cache_key = self._cache_key(method, url, params, json_body, request_headers)
+        cached = self._cache_get(cache_key)
+        if cached is not None:
+            return cached
+
+        if allow_robots_check and self._respect_robots and not await self._robots.allowed(url):
+            log.info("skipping URL disallowed by robots.txt", url=url)
+            return self._cache_put(
+                cache_key,
+                FetchResult(url=url, error="disallowed by robots.txt", blocked_by_robots=True),
+            )
 
         host = host_of(url)
         last_error: str | None = None
@@ -346,6 +392,8 @@ class HttpClient:
         for attempt in range(self._retries + 1):
             async with self._semaphore:
                 await self._throttle.wait(host)
+                self.request_count += 1
+                note_effort("requests")
                 try:
                     response = await self._client.request(
                         method,
@@ -363,6 +411,8 @@ class HttpClient:
                 else:
                     last_status = response.status_code
                     if response.status_code in _RETRYABLE_STATUS and attempt < self._retries:
+                        self.retry_count += 1
+                        note_effort("retries")
                         delay = self._retry_delay(attempt, response.headers.get("Retry-After"))
                         log.debug(
                             "retrying request",
@@ -377,13 +427,16 @@ class HttpClient:
                     if response.status_code in (401, 403):
                         # Authentication or an anti-bot wall. We do not attempt
                         # to work around either.
-                        return FetchResult(
-                            url=str(response.url),
-                            status=response.status_code,
-                            headers=dict(response.headers),
-                            error=(
-                                f"access denied (HTTP {response.status_code}); "
-                                "source requires authentication or blocks automated access"
+                        return self._cache_put(
+                            cache_key,
+                            FetchResult(
+                                url=str(response.url),
+                                status=response.status_code,
+                                headers=dict(response.headers),
+                                error=(
+                                    f"access denied (HTTP {response.status_code}); "
+                                    "source requires authentication or blocks automated access"
+                                ),
                             ),
                         )
 
@@ -392,18 +445,68 @@ class HttpClient:
                     # honour max_html_bytes; public ATS APIs may exceed that.
                     if not expect_json and len(body) > self._max_bytes:
                         body = body[: self._max_bytes]
-                    return FetchResult(
-                        url=str(response.url),
-                        status=response.status_code,
-                        text=body,
-                        headers=dict(response.headers),
-                        error=None if response.is_success else f"HTTP {response.status_code}",
+                    return self._cache_put(
+                        cache_key,
+                        FetchResult(
+                            url=str(response.url),
+                            status=response.status_code,
+                            text=body,
+                            headers=dict(response.headers),
+                            error=None if response.is_success else f"HTTP {response.status_code}",
+                        ),
                     )
 
             if attempt < self._retries:
+                self.retry_count += 1
+                note_effort("retries")
                 await asyncio.sleep(self._retry_delay(attempt, None))
 
-        return FetchResult(url=url, status=last_status, error=last_error or "request failed")
+        return self._cache_put(
+            cache_key,
+            FetchResult(url=url, status=last_status, error=last_error or "request failed"),
+        )
+
+    def _cache_key(
+        self,
+        method: str,
+        url: str,
+        params: dict[str, Any] | None,
+        json_body: Any | None,
+        headers: dict[str, str] | None,
+    ) -> tuple[Any, ...] | None:
+        """GET responses may be reused inside this run. POST pages must not be.
+
+        A Range probe is stored separately from a full GET so a short body
+        cannot replace the listing or job page.
+        """
+        if method.upper() != "GET" or json_body is not None:
+            return None
+        try:
+            items = tuple(sorted((params or {}).items()))
+        except TypeError:
+            return None
+        varying = []
+        for key, value in (headers or {}).items():
+            name = str(key).lower()
+            if name in {"range", "accept"}:
+                varying.append((name, str(value)))
+        return (url, items, tuple(sorted(varying)))
+
+    def _cache_get(self, key: tuple[Any, ...] | None) -> FetchResult | None:
+        if key is None:
+            return None
+        hit = self._get_cache.get(key)
+        if hit is None:
+            return None
+        self.cache_hits += 1
+        return hit
+
+    def _cache_put(self, key: tuple[Any, ...] | None, result: FetchResult) -> FetchResult:
+        # Timeouts and 5xx stay uncached so a later attempt in this run can succeed.
+        terminal = result.ok or result.blocked_by_robots or result.status in (401, 403, 404)
+        if key is not None and terminal:
+            self._get_cache[key] = result
+        return result
 
     def _retry_delay(self, attempt: int, retry_after: str | None) -> float:
         """Exponential backoff with jitter, capped, honouring ``Retry-After``."""
@@ -541,20 +644,36 @@ class DiscoverySource(ABC):
         try:
             jobs = await self.discover(company)
         except SourceError as exc:
-            return SourceResult.fail(
-                self.name,
-                label,
-                str(exc),
-                time.perf_counter() - started,
-                status=exc.status,
-                http_status=exc.http_status,
-                diagnostics=exc.diagnostics,
+            return self._with_source_diagnostics(
+                SourceResult.fail(
+                    self.name,
+                    label,
+                    str(exc),
+                    time.perf_counter() - started,
+                    status=exc.status,
+                    http_status=exc.http_status,
+                    diagnostics=exc.diagnostics,
+                )
             )
         except Exception as exc:
-            return SourceResult.fail(
-                self.name, label, str(exc), time.perf_counter() - started
+            return self._with_source_diagnostics(
+                SourceResult.fail(
+                    self.name, label, str(exc), time.perf_counter() - started
+                )
             )
-        return SourceResult.ok(self.name, label, jobs, time.perf_counter() - started)
+        return self._with_source_diagnostics(
+            SourceResult.ok(self.name, label, jobs, time.perf_counter() - started)
+        )
+
+    def _with_source_diagnostics(self, result: SourceResult) -> SourceResult:
+        """Merge adapter timings onto the result. Exception fields win."""
+        extra = getattr(self, "last_diagnostics", None)
+        if not isinstance(extra, dict) or not extra:
+            return result
+        merged = dict(extra)
+        merged.update(result.diagnostics or {})
+        result.diagnostics = merged
+        return result
 
     def _posting(self, **kwargs: Any) -> RawJobPosting:
         """Build a :class:`RawJobPosting` tagged with this source's name."""

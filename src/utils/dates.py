@@ -24,6 +24,7 @@ __all__ = [
     "format_datetime",
     "is_within_hours",
     "parse_datetime",
+    "parse_labeled_job_date",
     "parse_relative_time",
     "utcnow",
 ]
@@ -117,22 +118,9 @@ def parse_relative_time(text: str, *, now: datetime | None = None) -> datetime |
     if not lowered:
         return None
 
-    # Phrases that mean "effectively now". Deliberately conservative: these are
-    # treated as the current instant rather than midnight, because a midnight
-    # assumption would silently age a posting by up to 24 hours.
-    if any(
-        token in lowered
-        for token in ("just posted", "just now", "moments ago", "new posting", "posted today", "today")
-    ):
-        if "yesterday" not in lowered:
-            return reference
-
-    if "yesterday" in lowered:
-        return reference - timedelta(hours=24)
-
     match = _RELATIVE_RE.search(lowered)
     if not match:
-        return None
+        return _instant_or_yesterday(lowered, reference)
 
     value = float(match.group("value"))
     unit = match.group("unit").lower().rstrip("s").rstrip(".")
@@ -143,6 +131,20 @@ def parse_relative_time(text: str, *, now: datetime | None = None) -> datetime |
     if hours is None:
         return None
     return reference - timedelta(hours=value * hours)
+
+
+def _instant_or_yesterday(lowered: str, reference: datetime) -> datetime | None:
+    """Accept only phrases with a usable recency signal.
+
+    ``today`` and ``posted today`` name a calendar day, not an elapsed time,
+    so they stay unknown. A numeric phrase such as ``2 hours ago`` is handled
+    before this function is called.
+    """
+    if "yesterday" in lowered:
+        return reference - timedelta(hours=24)
+    if any(token in lowered for token in ("just posted", "just now", "moments ago", "new posting")):
+        return reference
+    return None
 
 
 def _parse_epoch(text: str) -> datetime | None:
@@ -202,6 +204,29 @@ def parse_datetime(value: object, *, now: datetime | None = None) -> datetime | 
             continue
 
     return parse_relative_time(text, now=now)
+
+
+_DATE_LABEL_RE = re.compile(
+    r"^(?:posted\s+on|updated\s+on|posted|updated)\s*[:\-]?\s*",
+    re.IGNORECASE,
+)
+
+
+def parse_labeled_job_date(value: object, *, now: datetime | None = None) -> datetime | None:
+    """Parse a posting date after removing a Posted or Updated label.
+
+    The label is not a timestamp. ``None`` means the text did not contain a
+    reliable date, so the caller keeps ``DateSource.UNKNOWN``.
+    """
+    if not isinstance(value, str):
+        return parse_datetime(value, now=now)
+    text = " ".join(value.split())
+    for _ in range(2):
+        cleaned = _DATE_LABEL_RE.sub("", text).strip()
+        if cleaned == text:
+            break
+        text = cleaned
+    return parse_datetime(text, now=now)
 
 
 def age_hours(moment: datetime | None, *, now: datetime | None = None) -> float | None:

@@ -37,6 +37,7 @@ jobs:
           python -m playwright install --with-deps chromium
 
       - name: Run pipeline
+        # Production entrypoint only. This job does not pass browser or smoke flags.
         env:
           LLM_PROVIDER: ${{ secrets.LLM_PROVIDER }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
@@ -56,6 +57,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # ATS registry is static config. Do not commit it from the daily run.
           git add data/current data/archive
           if git diff --cached --quiet; then
             echo "No tracker changes to commit."

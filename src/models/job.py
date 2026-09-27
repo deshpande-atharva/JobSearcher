@@ -366,6 +366,14 @@ class Job(BaseModel):
     source: str
     direct_application_url: str
     discovery_url: str | None = None
+    # Kept off the workbook. Source is provenance, not a ranking.
+    discovery_method: str = Field(default="", exclude=True)
+    additional_sources: list[str] = Field(default_factory=list, exclude=True)
+    provenance: dict[str, Any] = Field(default_factory=dict, exclude=True)
+    # A completed failed probe rejects the job. url_verified is true only when
+    # the probe was reachable. Fixture mode does not probe.
+    url_reachable: bool | None = Field(default=None, exclude=True)
+    url_verified: bool = Field(default=False, exclude=True)
 
     # --- user-owned tracking columns ---------------------------------------
     # Never overwritten once a value exists in the workbook.

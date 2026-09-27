@@ -16,12 +16,13 @@ run:
   # Upper bound on concurrent outbound HTTP requests across all sources.
   max_concurrency: 8
   request_timeout_seconds: 30
+  company_timeout_seconds: 240
   retry_attempts: 3
   retry_backoff_seconds: 1.5
   # Politeness identifier sent with every request.
   user_agent: "job-agent/1.0 (+https://github.com/your-username/job-agent)"
   # Safety cap after cross-source dedup. 0 = process every job.
-  # 15000 covers the 35-company universe once Workday CXS paginates
+  # 15000 covers the enabled company universe once Workday CXS paginates
   # (~3100 Greenhouse + ~6300 Workday + Lever/Ashby/career). Truncation,
   # if it ever happens, is round-robin by company and reported.
   max_jobs_per_run: 15000
@@ -29,19 +30,33 @@ run:
 discovery:
   sources:
     jobright:
-      enabled: true
-      # Optional aggregator. ATS boards are preferred when available.
-      entry_url: "https://jobright.ai/entry-level-jobs"
-      max_pages: 3
-      # Jobright is JS-heavy; allow a rendered fallback when static HTML has
-      # no machine-readable job data.
-      allow_browser_render: true
+      # Discovery only. Off until a live run resolves official URLs reliably.
+      # The scheduled workflow does not turn this on.
+      enabled: false
+      # Public listing that includes job cards. The entry-level page is SEO copy
+      # without postings. Individual /jobs/info pages currently return 403.
+      entry_url: "https://jobright.ai/remote-jobs/software-engineering"
+      max_pages: 1
+      allow_browser_render: false
+      max_queries: 1
+      max_results_per_query: 40
+      max_total_results: 80
+      max_detail_pages: 1
+      max_navigation_attempts: 1
     greenhouse:
       enabled: true
     lever:
       enabled: true
+      max_companies: 8
+      max_jobs: 400
+      max_detail_pages: 0
+      max_navigation_attempts: 0
     ashby:
       enabled: true
+      max_companies: 8
+      max_jobs: 400
+      max_detail_pages: 0
+      max_navigation_attempts: 0
     smartrecruiters:
       enabled: true
     workday:
@@ -51,6 +66,21 @@ discovery:
       max_jobs: 2000
       # Workday-only bound. Greenhouse/Lever/Ashby keep run.max_concurrency.
       max_concurrency: 2
+      # Playwright discovery is additive. Leave this false for the daily run.
+      browser_enabled: false
+      browser_max_jobs: 80
+      browser_detail_limit: 12
+      # Only after a board hits max_jobs. Uses the searchText field the
+      # public CXS body already sends. appliedFacets stay empty.
+      partitions_enabled: true
+      max_partitions_per_company: 3
+      max_jobs_per_partition: 120
+      max_requests_per_company: 140
+      max_requests_per_run: 800
+      partition_search_texts:
+        - software engineer
+        - backend engineer
+        - platform engineer
     icims:
       enabled: true
     company_career:
@@ -58,8 +88,11 @@ discovery:
   # Cache of successfully discovered ATS identifiers (no secrets, no job data).
   ats_registry: "config/ats_registry.yaml"
   auto_detect_ats: true
-  persist_ats_registry: true
+  # Static repository configuration. Daily production must not rewrite it.
+  persist_ats_registry: false
   career_detail_fetch_limit: 12
+  # Career fallback stage budget. The company timeout remains 240s.
+  career_stage_budget_seconds: 90
   skip_career_page_when_ats_has_jobs: true
 
 filters:
@@ -173,9 +206,9 @@ urls:
     - gclid
   # Verify the final URL resolves (HEAD, falling back to GET).
   verify_reachability: true
-  # Treat an unreachable-but-well-formed ATS URL as acceptable rather than
-  # discarding a real job because of a transient network error.
-  allow_unverified_ats_urls: true
+  # A completed failed probe rejects the job and keeps the URL on the rejection.
+  # An ATS-shaped host is not enough. Fixture mode does not probe.
+  allow_unverified_ats_urls: false
 
 # ---------------------------------------------------------------------------
 # H-1B sponsorship EVIDENCE configuration.
@@ -216,7 +249,10 @@ llm:
   max_calls_per_run: 300
   # Stop calling the provider after this many consecutive failures.
   circuit_breaker_failures: 5
+  # One probe is allowed after this pause. A successful probe closes the breaker.
+  circuit_reset_seconds: 30
   retry_attempts: 2
+  retry_backoff_seconds: 0.5
 
 output:
   current_workbook: "data/current/jobs.xlsx"
@@ -234,13 +270,27 @@ notifications:
 
 scraping:
   respect_robots_txt: true
-  min_delay_seconds: 1.0
+  # Per-host floor. Still polite; not a bypass of site rate limits.
+  min_delay_seconds: 0.25
   max_html_bytes: 4000000
   playwright:
     enabled: true
     headless: true
     timeout_seconds: 45
+    max_renders_per_run: 12
 
 fixtures:
   # Used by --fixture-mode. Offline copies of source payloads.
   directory: "tests/fixtures"
+
+# Greenhouse navigation pilot only. The daily pipeline does not run this loop.
+greenhouse_pilot:
+  max_navigation_steps: 30
+  max_navigation_seconds: 90
+  navigation_dir: "data/navigation"
+  report_dir: "data/reports"
+
+candidate:
+  resume_path: "data/candidate/resume.pdf"
+  profile_path: "data/candidate/profile.json"
+  history_dir: "data/candidate/profile_history"

@@ -102,7 +102,7 @@ def test_required_two_years_fits() -> None:
     assert verdict.fits_entry_level is True
 
 
-def test_senior_title_rejected() -> None:
+def test_senior_title_with_zero_to_two_years_stays_eligible() -> None:
     roles = _roles()
     for title in (
         "Senior Software Engineer",
@@ -117,7 +117,17 @@ def test_senior_title_rejected() -> None:
             "Required Qualifications\n0-2 years of experience.",
             roles,
         )
-        assert verdict.fits_entry_level is False, title
+        assert verdict.fits_entry_level is True, title
+
+
+def test_senior_title_over_two_years_is_rejected() -> None:
+    roles = _roles()
+    verdict = classify_seniority(
+        "Senior Software Engineer",
+        "Required Qualifications\n5+ years of experience.",
+        roles,
+    )
+    assert verdict.fits_entry_level is False
 
 
 def test_numbered_title_with_required_zero_to_two_stays_eligible() -> None:

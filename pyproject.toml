@@ -29,6 +29,7 @@ dependencies = [
     "langgraph>=0.2.60",
     "google-genai>=1.0,<3",
     "playwright>=1.44",
+    "pypdf>=5,<7",
 ]
 
 [project.optional-dependencies]

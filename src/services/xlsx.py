@@ -242,9 +242,11 @@ def write_workbooks(
         _write_sheet(current_tmp, rows)
         if archive_tmp is not None:
             _write_sheet(archive_tmp, rows)
-        os.replace(current_tmp, current_path)
+        # Archive is replaced first. A failed archive write leaves the previous
+        # current workbook untouched. os.replace is atomic on the same volume.
         if archive_tmp is not None and archive_path is not None:
             os.replace(archive_tmp, archive_path)
+        os.replace(current_tmp, current_path)
     finally:
         for tmp in (current_tmp, archive_tmp):
             if tmp is not None and tmp.exists():

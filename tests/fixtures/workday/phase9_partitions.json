@@ -1,0 +1,13 @@
+{
+  "unfiltered_cap": 2000,
+  "partitions": {
+    "software engineer": [
+      {"id": "R1", "title": "Software Engineer", "postedOn": "Posted 30+ Days Ago"},
+      {"id": "R9001", "title": "Software Engineer", "postedOn": "Posted 2 Hours Ago"}
+    ],
+    "backend engineer": [
+      {"id": "R9001", "title": "Software Engineer", "postedOn": "Posted 2 Hours Ago"},
+      {"id": "R9002", "title": "Software Engineer", "postedOn": "Posted 10 Days Ago"}
+    ]
+  }
+}

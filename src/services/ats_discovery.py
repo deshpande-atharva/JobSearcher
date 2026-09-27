@@ -122,6 +122,32 @@ class ATSDiscoveryResult:
 AtsDetection = ATSDiscoveryResult
 
 
+def _valid_icims_identifier(token: str) -> bool:
+    """Accept a public iCIMS jobs URL. Reject internal, login, and markup junk.
+
+    A careers page that merely mentions ``internal-*.icims.com`` is not evidence
+    of a board we should crawl. Those hosts are what pushed AMD past the
+    company timeout.
+    """
+    if not is_http_url(token) or "icims.com" not in token.lower():
+        return False
+    if any(fragment in token.lower() for fragment in ("&amp;", "&quot;", "<", ">", "\\\"")):
+        return False
+    parsed = urlparse(token.strip())
+    host = parsed.netloc.lower()
+    if not host.endswith(".icims.com"):
+        return False
+    subdomain = host.split(".")[0]
+    if subdomain.startswith("internal") or "login" in subdomain:
+        return False
+    path = (parsed.path or "").lower()
+    query = (parsed.query or "").lower()
+    blob = f"{path}?{query}"
+    if any(part in blob for part in ("privacy", "login", "userhome", "signin", "sign-in")):
+        return False
+    return "/jobs" in path
+
+
 def is_valid_ats_identifier(ats_type: str | None, identifier: str | None) -> bool:
     """Reject empty, reserved, or structurally impossible identifiers."""
     if not ats_type or not identifier:
@@ -138,7 +164,7 @@ def is_valid_ats_identifier(ats_type: str | None, identifier: str | None) -> boo
 
         return parse_workday_site(token) is not None
     if kind == "icims":
-        return "icims.com" in lowered and is_http_url(token)
+        return _valid_icims_identifier(token)
     if kind in {"greenhouse", "lever", "ashby", "smartrecruiters"}:
         return bool(re.fullmatch(r"[A-Za-z0-9_.-]+", token.strip("/")))
     return False
@@ -147,7 +173,9 @@ def is_valid_ats_identifier(ats_type: str | None, identifier: str | None) -> boo
 def detect_ats_from_url(url: str | None) -> ATSDiscoveryResult | None:
     """Read an ATS type/identifier out of a single URL. No network."""
     hit = detect_ats(url)
-    return hit if hit.ok else None
+    if hit.ok or hit.method == "rejected":
+        return hit
+    return None
 
 
 def detect_ats(
@@ -247,7 +275,14 @@ def _hit(
 ) -> ATSDiscoveryResult:
     token = identifier.strip()
     if not is_valid_ats_identifier(ats_type, token):
-        return ATSDiscoveryResult(detected=False, source_url=evidence, method=method)
+        return ATSDiscoveryResult(
+            detected=False,
+            ats_type=ats_type,
+            identifier=token,
+            source_url=evidence,
+            method="rejected",
+            evidence_url=evidence,
+        )
     discovery_method = "automatic" if method in {"url", "html", "redirect", "careers_url"} else method
     return ATSDiscoveryResult(
         detected=True,
