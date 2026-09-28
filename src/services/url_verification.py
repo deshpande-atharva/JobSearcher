@@ -9,7 +9,8 @@ from dataclasses import dataclass, field
 
 from src.models.config import AppConfig
 from src.models.job import RawJobPosting
-from src.sources.base import HttpClient
+from src.sources.base import FetchResult, HttpClient
+from src.sources.workday import workday_url_identifies_job
 from src.utils.urls import (
     UrlKind,
     UrlPolicy,
@@ -17,6 +18,7 @@ from src.utils.urls import (
     canonicalize_url,
     classify_url,
     extract_job_id,
+    host_of,
     is_generic_careers_page,
     is_http_url,
     unwrap_redirect,
@@ -99,6 +101,15 @@ def pick_direct_url(
                 url, verdict = other, other_verdict
                 break
 
+    if verdict.ats_type == "workday" and not workday_url_identifies_job(url):
+        return UrlCheck(
+            accepted=False,
+            url=url,
+            verdict=verdict,
+            reason="Workday URL does not identify a public job on its career site",
+            candidates_tried=candidates,
+        )
+
     canonical = canonicalize_url(url, policy.strip_query_params)
     job_id = posting.job_id or extract_job_id(canonical) or extract_job_id(url)
     return UrlCheck(
@@ -128,6 +139,11 @@ async def verify_url(
         return check
 
     result = await http.head(check.url)
+    if result.ok and _workday_page_missing(check.url, result):
+        check.reachable = False
+        check.accepted = False
+        check.reason = "application URL does not resolve to a public Workday job"
+        return check
     if result.ok:
         check.reachable = True
         return check
@@ -139,3 +155,12 @@ async def verify_url(
     check.accepted = False
     check.reason = f"application URL was not reachable: {result.error or result.status}"
     return check
+
+
+def _workday_page_missing(url: str, result: FetchResult) -> bool:
+    """Workday answers a missing posting with HTTP 200 and an error document."""
+    host = host_of(url)
+    if "myworkdayjobs.com" not in host and "myworkdaysite.com" not in host:
+        return False
+    text = result.text or ""
+    return "Requested page not found" in text or "wml:Application_Error" in text

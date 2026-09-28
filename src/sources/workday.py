@@ -41,9 +41,16 @@ from src.sources.parsing import (
 )
 from src.utils.dates import parse_datetime
 from src.utils.normalization import clean_text
-from src.utils.urls import is_http_url, join_url
+from src.utils.urls import is_http_url
 
-__all__ = ["CXS_PAGE_SIZE", "WorkdaySource", "cxs_request_body", "parse_workday_site"]
+__all__ = [
+    "CXS_PAGE_SIZE",
+    "WorkdaySource",
+    "cxs_request_body",
+    "parse_workday_site",
+    "public_workday_job_url",
+    "workday_url_identifies_job",
+]
 
 _CXS_FIELDS = ("appliedFacets", "limit", "offset", "searchText")
 
@@ -118,6 +125,54 @@ def parse_workday_site(identifier: str) -> tuple[str, str, str] | None:
     if not tenant or not site:
         return None
     return host, tenant, site
+
+
+_NON_POSTING_PATHS = frozenset({"/job", "/jobs", "/search", "/details"})
+
+
+def public_workday_job_url(host: str, site: str, external_path: str | None) -> str | None:
+    """Public job URL from a validated board and CXS ``externalPath``.
+
+    The CXS field is a path relative to the career site, for example
+    ``/job/Location/Title_R123``. It is not an absolute URL path. Joining it
+    onto ``https://host/site`` with ``urljoin`` drops ``site``, because a
+    relative segment replaces the last path part when the base has no trailing
+    slash. An explicit http(s) URL in the response is kept as supplied.
+    """
+    if not isinstance(external_path, str):
+        return None
+    raw = external_path.strip()
+    if not raw:
+        return None
+    if is_http_url(raw):
+        return raw
+    if not host or not site:
+        return None
+    path = raw if raw.startswith("/") else f"/{raw}"
+    if path.rstrip("/").lower() in _NON_POSTING_PATHS:
+        return None
+    return f"https://{host}/{site}{path}"
+
+
+def workday_url_identifies_job(url: str | None) -> bool:
+    """True when a Workday URL names a site and a ``/job/`` posting path.
+
+    A Workday hostname alone, or ``/job/...`` with the career site removed, is
+    not a public job page.
+    """
+    if not is_http_url(url):
+        return False
+    assert url is not None
+    parsed = urlparse(url.strip())
+    host = parsed.netloc.lower()
+    if "myworkdayjobs.com" not in host and "myworkdaysite.com" not in host:
+        return False
+    segments = [segment for segment in (parsed.path or "").split("/") if segment]
+    if segments and segments[0].lower() in _LANG_SEGMENTS:
+        segments = segments[1:]
+    if len(segments) < 2 or segments[0].lower() in _PATH_SKIP:
+        return False
+    return any(segment.lower() == "job" for segment in segments[1:])
 
 
 class WorkdaySource(DiscoverySource):
@@ -599,12 +654,9 @@ class WorkdaySource(DiscoverySource):
             return None
         title = clean_text(str(pick(entry, "title") or "")) or None
         external_path = pick(entry, "externalPath")
-        apply_url = None
-        if isinstance(external_path, str) and external_path:
-            if is_http_url(external_path):
-                apply_url = external_path
-            else:
-                apply_url = join_url(f"https://{host}/{site}", external_path.lstrip("/"))
+        apply_url = public_workday_job_url(
+            host, site, external_path if isinstance(external_path, str) else None
+        )
         if not title and not apply_url:
             return None
 
