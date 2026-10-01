@@ -1,0 +1,435 @@
+{
+  "boards": {
+    "ashby:iambic-therapeutics": {
+      "consecutive_zero_new": 0,
+      "cooldown_remaining": 0,
+      "display": "ashby:iambic-therapeutics",
+      "effort": "full",
+      "known_job_ids": [],
+      "last_new_job": "2026-10-01",
+      "last_seen": "2026-10-01",
+      "new_jobs": 0,
+      "recent": [
+        {
+          "new": 1,
+          "qualified": 1
+        }
+      ],
+      "recent_novelty_rate": 1.0,
+      "repeat_jobs": 0,
+      "revisit_due": false,
+      "runs_seen": 1,
+      "sources": [],
+      "unique_jobs": 0
+    }
+  },
+  "companies": {
+    "affirm": {
+      "consecutive_zero_new": 1,
+      "cooldown_remaining": 0,
+      "display": "Affirm",
+      "effort": "full",
+      "known_job_ids": [
+        "8005406003"
+      ],
+      "last_new_job": null,
+      "last_seen": "2026-10-01",
+      "new_jobs": 0,
+      "recent": [
+        {
+          "new": 0,
+          "qualified": 1
+        }
+      ],
+      "recent_novelty_rate": 0.0,
+      "repeat_jobs": 1,
+      "revisit_due": false,
+      "runs_seen": 1,
+      "sources": [
+        "greenhouse"
+      ],
+      "unique_jobs": 1
+    },
+    "airbnb": {
+      "consecutive_zero_new": 1,
+      "cooldown_remaining": 0,
+      "display": "Airbnb",
+      "effort": "full",
+      "known_job_ids": [
+        "8214444"
+      ],
+      "last_new_job": null,
+      "last_seen": "2026-10-01",
+      "new_jobs": 0,
+      "recent": [
+        {
+          "new": 0,
+          "qualified": 1
+        }
+      ],
+      "recent_novelty_rate": 0.0,
+      "repeat_jobs": 1,
+      "revisit_due": false,
+      "runs_seen": 1,
+      "sources": [
+        "greenhouse"
+      ],
+      "unique_jobs": 1
+    },
+    "asana": {
+      "consecutive_zero_new": 1,
+      "cooldown_remaining": 0,
+      "display": "Asana",
+      "effort": "full",
+      "known_job_ids": [
+        "8212172"
+      ],
+      "last_new_job": null,
+      "last_seen": "2026-10-01",
+      "new_jobs": 0,
+      "recent": [
+        {
+          "new": 0,
+          "qualified": 1
+        }
+      ],
+      "recent_novelty_rate": 0.0,
+      "repeat_jobs": 1,
+      "revisit_due": false,
+      "runs_seen": 1,
+      "sources": [
+        "greenhouse"
+      ],
+      "unique_jobs": 1
+    },
+    "booz allen hamilton": {
+      "consecutive_zero_new": 1,
+      "cooldown_remaining": 0,
+      "display": "Booz Allen Hamilton",
+      "effort": "full",
+      "known_job_ids": [
+        "r0250290",
+        "r0250655"
+      ],
+      "last_new_job": null,
+      "last_seen": "2026-10-01",
+      "new_jobs": 0,
+      "recent": [
+        {
+          "new": 0,
+          "qualified": 2
+        }
+      ],
+      "recent_novelty_rate": 0.0,
+      "repeat_jobs": 2,
+      "revisit_due": false,
+      "runs_seen": 1,
+      "sources": [
+        "workday"
+      ],
+      "unique_jobs": 2
+    },
+    "iambic therapeutics": {
+      "consecutive_zero_new": 0,
+      "cooldown_remaining": 0,
+      "display": "Iambic Therapeutics, Inc",
+      "effort": "full",
+      "known_job_ids": [
+        "26e58057-83e9-46af-85eb-90142cf3b8ba"
+      ],
+      "last_new_job": "2026-10-01",
+      "last_seen": "2026-10-01",
+      "new_jobs": 1,
+      "recent": [
+        {
+          "new": 1,
+          "qualified": 1
+        }
+      ],
+      "recent_novelty_rate": 1.0,
+      "repeat_jobs": 0,
+      "revisit_due": false,
+      "runs_seen": 1,
+      "sources": [
+        "ashby"
+      ],
+      "unique_jobs": 1
+    },
+    "lyft": {
+      "consecutive_zero_new": 1,
+      "cooldown_remaining": 0,
+      "display": "Lyft",
+      "effort": "full",
+      "known_job_ids": [
+        "8806570002"
+      ],
+      "last_new_job": null,
+      "last_seen": "2026-10-01",
+      "new_jobs": 0,
+      "recent": [
+        {
+          "new": 0,
+          "qualified": 1
+        }
+      ],
+      "recent_novelty_rate": 0.0,
+      "repeat_jobs": 1,
+      "revisit_due": false,
+      "runs_seen": 1,
+      "sources": [
+        "greenhouse"
+      ],
+      "unique_jobs": 1
+    },
+    "notion": {
+      "consecutive_zero_new": 1,
+      "cooldown_remaining": 0,
+      "display": "Notion",
+      "effort": "full",
+      "known_job_ids": [
+        "2b587e66-deac-421a-a824-9415ba78b5a7"
+      ],
+      "last_new_job": null,
+      "last_seen": "2026-10-01",
+      "new_jobs": 0,
+      "recent": [
+        {
+          "new": 0,
+          "qualified": 1
+        }
+      ],
+      "recent_novelty_rate": 0.0,
+      "repeat_jobs": 1,
+      "revisit_due": false,
+      "runs_seen": 1,
+      "sources": [
+        "ashby"
+      ],
+      "unique_jobs": 1
+    },
+    "nuro": {
+      "consecutive_zero_new": 1,
+      "cooldown_remaining": 0,
+      "display": "Nuro",
+      "effort": "full",
+      "known_job_ids": [
+        "8180955"
+      ],
+      "last_new_job": null,
+      "last_seen": "2026-10-01",
+      "new_jobs": 0,
+      "recent": [
+        {
+          "new": 0,
+          "qualified": 1
+        }
+      ],
+      "recent_novelty_rate": 0.0,
+      "repeat_jobs": 1,
+      "revisit_due": false,
+      "runs_seen": 1,
+      "sources": [
+        "greenhouse"
+      ],
+      "unique_jobs": 1
+    },
+    "scale ai": {
+      "consecutive_zero_new": 1,
+      "cooldown_remaining": 0,
+      "display": "Scale AI",
+      "effort": "full",
+      "known_job_ids": [
+        "4736426005"
+      ],
+      "last_new_job": null,
+      "last_seen": "2026-10-01",
+      "new_jobs": 0,
+      "recent": [
+        {
+          "new": 0,
+          "qualified": 1
+        }
+      ],
+      "recent_novelty_rate": 0.0,
+      "repeat_jobs": 1,
+      "revisit_due": false,
+      "runs_seen": 1,
+      "sources": [
+        "greenhouse"
+      ],
+      "unique_jobs": 1
+    }
+  },
+  "runs": [
+    {
+      "new_jobs": 1,
+      "novelty_change": null,
+      "novelty_rate": 0.1,
+      "previous_novelty_rate": null,
+      "qualified": 10,
+      "repeat_jobs": 9,
+      "run_id": "2026-10-01T19:05:48Z"
+    }
+  ],
+  "sources": {
+    "ashby": {
+      "company_keys": [
+        "iambic therapeutics",
+        "notion"
+      ],
+      "discovered": 0,
+      "last_success": "2026-10-01",
+      "new_companies": 1,
+      "new_jobs": 1,
+      "qualified": 2,
+      "recent": [
+        {
+          "new": 1,
+          "qualified": 2
+        }
+      ],
+      "recent_novelty_rate": 0.5,
+      "repeat_jobs": 1,
+      "runs": 1,
+      "unique_companies": 2
+    },
+    "greenhouse": {
+      "company_keys": [
+        "affirm",
+        "airbnb",
+        "asana",
+        "lyft",
+        "nuro",
+        "scale ai"
+      ],
+      "discovered": 0,
+      "last_success": "2026-10-01",
+      "new_companies": 0,
+      "new_jobs": 0,
+      "qualified": 6,
+      "recent": [
+        {
+          "new": 0,
+          "qualified": 6
+        }
+      ],
+      "recent_novelty_rate": 0.0,
+      "repeat_jobs": 6,
+      "runs": 1,
+      "unique_companies": 6
+    },
+    "workday": {
+      "company_keys": [
+        "booz allen hamilton"
+      ],
+      "discovered": 0,
+      "last_success": "2026-10-01",
+      "new_companies": 0,
+      "new_jobs": 0,
+      "qualified": 2,
+      "recent": [
+        {
+          "new": 0,
+          "qualified": 2
+        }
+      ],
+      "recent_novelty_rate": 0.0,
+      "repeat_jobs": 2,
+      "runs": 1,
+      "unique_companies": 1
+    }
+  },
+  "strategies": {
+    "ashby_configured": {
+      "companies": 1,
+      "company_keys": [
+        "notion"
+      ],
+      "discovered": 0,
+      "last_used": "2026-10-01",
+      "new_companies": 0,
+      "new_jobs": 0,
+      "qualified": 1,
+      "recent": [
+        {
+          "new": 0,
+          "qualified": 1
+        }
+      ],
+      "recent_novelty_rate": 0.0,
+      "repeat_jobs": 1,
+      "runs": 1,
+      "source": "ashby"
+    },
+    "ashby_global_index": {
+      "companies": 1,
+      "company_keys": [
+        "iambic therapeutics"
+      ],
+      "discovered": 0,
+      "last_used": "2026-10-01",
+      "new_companies": 1,
+      "new_jobs": 1,
+      "qualified": 1,
+      "recent": [
+        {
+          "new": 1,
+          "qualified": 1
+        }
+      ],
+      "recent_novelty_rate": 1.0,
+      "repeat_jobs": 0,
+      "runs": 1,
+      "source": "ashby"
+    },
+    "greenhouse_configured": {
+      "companies": 6,
+      "company_keys": [
+        "affirm",
+        "airbnb",
+        "asana",
+        "lyft",
+        "nuro",
+        "scale ai"
+      ],
+      "discovered": 0,
+      "last_used": "2026-10-01",
+      "new_companies": 0,
+      "new_jobs": 0,
+      "qualified": 6,
+      "recent": [
+        {
+          "new": 0,
+          "qualified": 6
+        }
+      ],
+      "recent_novelty_rate": 0.0,
+      "repeat_jobs": 6,
+      "runs": 1,
+      "source": "greenhouse"
+    },
+    "workday_configured": {
+      "companies": 1,
+      "company_keys": [
+        "booz allen hamilton"
+      ],
+      "discovered": 0,
+      "last_used": "2026-10-01",
+      "new_companies": 0,
+      "new_jobs": 0,
+      "qualified": 2,
+      "recent": [
+        {
+          "new": 0,
+          "qualified": 2
+        }
+      ],
+      "recent_novelty_rate": 0.0,
+      "repeat_jobs": 2,
+      "runs": 1,
+      "source": "workday"
+    }
+  },
+  "updated_at": "2026-10-01T19:11:59Z",
+  "version": 1
+}
