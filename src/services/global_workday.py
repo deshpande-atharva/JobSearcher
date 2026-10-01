@@ -19,6 +19,7 @@ from urllib.parse import urlparse
 from src.models.config import CompanyConfig, CompanyDiscoveryBlock
 from src.models.job import RawJobPosting
 from src.models.state import PipelineState
+from src.services.discovery_learning import assign_strategy, board_selection_kwargs
 from src.services.public_board_index import (
     WORKDAY_DOMAINS,
     PublicBoardIndex,
@@ -177,7 +178,12 @@ async def collect_global_workday(
             tally["invalid_boards"] += 1
             continue
         fresh.append(career)
-    chosen = select_workday_boards(fresh, limit=limit, now=now)
+    chosen = select_workday_boards(
+        fresh,
+        limit=limit,
+        now=now,
+        **board_selection_kwargs(state, "workday"),
+    )
     tally["selected_boards"] = len(chosen)
     tally["boards_selected_for_collection"] = len(chosen)
     tally["duplicate_boards_skipped"] = int(tally["duplicate_boards"]) + int(
@@ -327,6 +333,7 @@ async def _one_board(
         found = posting.provenance.setdefault("discovered_from", [])
         if "global_index" not in found:
             found.append("global_index")
+        assign_strategy(posting, origin="global_index")
     capped = bool(result.diagnostics.get("source_list_cap_reached"))
     incomplete = bool(result.diagnostics.get("estimated_incomplete"))
     if capped or incomplete:

@@ -17,8 +17,9 @@ import base64
 import json
 import re
 import zlib
+from collections.abc import Callable, Collection, Mapping
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from urllib.parse import quote, unquote, urlparse
 
 __all__ = [
@@ -128,14 +129,14 @@ def valid_board_token(token: str) -> bool:
 
 def prefix_for_day(now: datetime | None = None) -> str:
     """One stable character per UTC date. The next day samples a different slice."""
-    moment = now or datetime.now(timezone.utc)
+    moment = now or datetime.now(UTC)
     return _PREFIXES[moment.toordinal() % len(_PREFIXES)]
 
 
 def prefixes_for_day(now: datetime | None = None, count: int = 4) -> tuple[str, ...]:
     """Spaced characters for one run. The same UTC date returns the same set."""
     width = max(1, min(int(count), len(_PREFIXES)))
-    start = (now or datetime.now(timezone.utc)).toordinal() % len(_PREFIXES)
+    start = (now or datetime.now(UTC)).toordinal() % len(_PREFIXES)
     step = max(1, len(_PREFIXES) // width)
     chosen: list[str] = []
     for offset in range(width):
@@ -186,8 +187,21 @@ def parse_cdx_tokens(body: str, *, kind: str) -> tuple[list[str], int]:
     return tokens, urls
 
 
-def select_board_tokens(tokens: list[str], *, limit: int, now: datetime | None = None) -> list[str]:
-    """Stable daily slice. The same UTC date returns the same tokens."""
+def select_board_tokens(
+    tokens: list[str],
+    *,
+    limit: int,
+    now: datetime | None = None,
+    priorities: Mapping[str, float] | None = None,
+    exploration_share: float = 0.0,
+    revisit_share: float = 0.0,
+    revisit_keys: Collection[str] | None = None,
+) -> list[str]:
+    """Stable daily slice. The same UTC date returns the same tokens.
+
+    ``priorities`` is optional. When it is missing or empty, selection stays the
+    UTC-date rotation. A non-empty map reorders only within this candidate list.
+    """
     unique: list[str] = []
     seen: set[str] = set()
     for token in tokens:
@@ -200,12 +214,18 @@ def select_board_tokens(tokens: list[str], *, limit: int, now: datetime | None =
         unique.append(token)
     if limit <= 0:
         return []
-    if len(unique) <= limit:
-        return unique
-    moment = now or datetime.now(timezone.utc)
-    start = moment.toordinal() % len(unique)
-    rotated = unique[start:] + unique[:start]
-    return rotated[:limit]
+    if not priorities or len(unique) <= limit:
+        return _date_slice(unique, limit=limit, now=now)
+    return _ranked_slice(
+        unique,
+        limit=limit,
+        now=now,
+        priorities=priorities,
+        exploration_share=exploration_share,
+        revisit_share=revisit_share,
+        revisit_keys=revisit_keys or (),
+        key_of=lambda token: token.lower(),
+    )
 
 
 def _token_from_url(url: str, *, kind: str) -> str | None:
@@ -275,7 +295,7 @@ def workday_clusters_for_run(
     if not ordered:
         ordered = list(_FALLBACK_WORKDAY_CLUSTERS)
     width = max(1, min(int(count), len(ordered)))
-    start = (now or datetime.now(timezone.utc)).toordinal() % len(ordered)
+    start = (now or datetime.now(UTC)).toordinal() % len(ordered)
     rotated = ordered[start:] + ordered[:start]
     return tuple(rotated[:width])
 
@@ -376,8 +396,21 @@ def parse_cdx_workday(body: str) -> tuple[list[str], int]:
     return found, urls
 
 
-def select_workday_boards(urls: list[str], *, limit: int, now: datetime | None = None) -> list[str]:
-    """Stable daily slice of career URLs. ``limit <= 0`` selects nothing."""
+def select_workday_boards(
+    urls: list[str],
+    *,
+    limit: int,
+    now: datetime | None = None,
+    priorities: Mapping[str, float] | None = None,
+    exploration_share: float = 0.0,
+    revisit_share: float = 0.0,
+    revisit_keys: Collection[str] | None = None,
+) -> list[str]:
+    """Stable daily slice of career URLs. ``limit <= 0`` selects nothing.
+
+    Without ``priorities``, the slice is the UTC-date rotation. Priorities only
+    reorder boards already in ``urls``.
+    """
     unique: list[str] = []
     seen: set[str] = set()
     for url in urls:
@@ -388,9 +421,89 @@ def select_workday_boards(urls: list[str], *, limit: int, now: datetime | None =
         unique.append(workday_career_url(url) or url)
     if limit <= 0:
         return []
+    if not priorities or len(unique) <= limit:
+        return _date_slice(unique, limit=limit, now=now)
+    return _ranked_slice(
+        unique,
+        limit=limit,
+        now=now,
+        priorities=priorities,
+        exploration_share=exploration_share,
+        revisit_share=revisit_share,
+        revisit_keys=revisit_keys or (),
+        key_of=lambda url: (workday_board_identity(url) or "").lower(),
+    )
+
+
+def _date_slice(unique: list[str], *, limit: int, now: datetime | None) -> list[str]:
+    """UTC-date rotation. Fewer candidates than ``limit`` returns every candidate."""
     if len(unique) <= limit:
         return unique
-    moment = now or datetime.now(timezone.utc)
+    moment = now or datetime.now(UTC)
     start = moment.toordinal() % len(unique)
     rotated = unique[start:] + unique[:start]
     return rotated[:limit]
+
+
+def _ranked_slice(
+    unique: list[str],
+    *,
+    limit: int,
+    now: datetime | None,
+    priorities: Mapping[str, float],
+    exploration_share: float,
+    revisit_share: float,
+    revisit_keys: Collection[str],
+    key_of: Callable[[str], str],
+) -> list[str]:
+    """Fill exploration, revisit, then highest novelty. Leftovers follow the date order."""
+    moment = now or datetime.now(UTC)
+    start = moment.toordinal() % len(unique)
+    rotated = unique[start:] + unique[:start]
+    scores = {str(key).lower(): float(value) for key, value in priorities.items()}
+    revisit = {str(key).lower() for key in revisit_keys}
+    unseen = [item for item in rotated if key_of(item) not in scores]
+    due = [item for item in rotated if key_of(item) in revisit and key_of(item) in scores]
+    known = [
+        item
+        for item in rotated
+        if key_of(item) in scores and key_of(item) not in revisit
+    ]
+    known.sort(key=lambda item: (-scores[key_of(item)], rotated.index(item)))
+
+    explore_slots = _share_slots(limit, exploration_share) if unseen else 0
+    revisit_slots = _share_slots(limit, revisit_share) if due else 0
+    while explore_slots + revisit_slots > limit:
+        if revisit_slots:
+            revisit_slots -= 1
+        else:
+            explore_slots -= 1
+    exploit_slots = limit - explore_slots - revisit_slots
+
+    chosen: list[str] = []
+    chosen_keys: set[str] = set()
+
+    def take(pool: list[str], count: int) -> None:
+        got = 0
+        for item in pool:
+            key = key_of(item)
+            if key in chosen_keys:
+                continue
+            chosen.append(item)
+            chosen_keys.add(key)
+            got += 1
+            if got >= count:
+                return
+
+    take(unseen, explore_slots)
+    take(due, revisit_slots)
+    take(known, exploit_slots)
+    if len(chosen) < limit:
+        take(rotated, limit - len(chosen))
+    return chosen[:limit]
+
+
+def _share_slots(limit: int, share: float) -> int:
+    if limit <= 0 or share <= 0:
+        return 0
+    return min(limit, max(0, round(limit * share)))

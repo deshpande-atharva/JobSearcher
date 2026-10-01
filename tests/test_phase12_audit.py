@@ -472,7 +472,7 @@ def test_fresh_audit_counters_follow_the_pipeline_reason(tmp_config) -> None:
         job_id="1",
         apply_url="https://boards.greenhouse.io/airbnb/jobs/1",
         location_raw="Remote",
-        posted_at=NOW - timedelta(hours=2),
+        posted_at=datetime.now(timezone.utc) - timedelta(hours=2),
         date_source=DateSource.POSTED_DATE,
     )
     state = PipelineState(config=tmp_config, raw_postings=[posting])

@@ -69,6 +69,8 @@ def build_email_body(summary: RunSummary, jobs: list[Any] | None = None) -> str:
     lines.extend(_source_health_lines(summary))
     if summary.failed_sources:
         lines.append("Failed sources: " + ", ".join(summary.failed_sources))
+    if summary.learning_report:
+        lines.extend(["", summary.learning_report])
     if final == 0:
         lines.extend(
             [

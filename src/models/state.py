@@ -202,6 +202,7 @@ class RunSummary(BaseModel):
     archive_status: str = "not_written"
     exit_code: int | None = None
     email_status: str = "not attempted"
+    learning_report: str = ""
     warnings: list[str] = Field(default_factory=list)
 
     def note(self, message: str) -> None:
@@ -341,6 +342,8 @@ class RunSummary(BaseModel):
         accepted = self.accepted_jobs_report()
         if accepted:
             lines += ["", accepted]
+        if self.learning_report:
+            lines += ["", self.learning_report]
         if self.failed_companies:
             lines += ["", "Failed companies:"]
             lines += [f"  - {name}" for name in self.failed_companies[:40]]

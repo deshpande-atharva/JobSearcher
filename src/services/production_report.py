@@ -743,4 +743,6 @@ def render_pipeline_health(state: PipelineState) -> str:
             )
     if summary.jobs_truncated:
         lines.append(f"coverage_cap: max_jobs_per_run truncated={summary.jobs_truncated}")
+    if summary.learning_report:
+        lines.append(summary.learning_report)
     return "\n".join(lines)

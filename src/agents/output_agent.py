@@ -15,6 +15,9 @@ log = get_logger(__name__)
 
 
 async def run_output(state: PipelineState) -> None:
+    from src.services.discovery_learning import persist_learning
+
+    persist_learning(state)
     config = state.config
     current = config.path(config.settings.output.current_workbook)
     archive_dir = config.path(config.settings.output.archive_dir)

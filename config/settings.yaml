@@ -300,6 +300,20 @@ notifications:
   # The email is a run summary, not a job dump.
   max_sample_jobs: 15
 
+# Previous qualified outcomes adjust the next run. Empty memory keeps the
+# current company crawls and the UTC-date public-board rotation.
+learning:
+  enabled: true
+  path: "data/learning/discovery_memory.json"
+  exploration_share: 0.20
+  revisit_share: 0.10
+  cooldown_runs: 3
+  revisit_runs: 2
+  min_runs_before_suppression: 2
+  novelty_weight: 1.0
+  exploration_bonus: 0.35
+  revisit_bonus: 0.20
+
 scraping:
   respect_robots_txt: true
   # Per-host floor. Still polite; not a bypass of site rate limits.

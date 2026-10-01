@@ -58,7 +58,11 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           # ATS registry is static config. Do not commit it from the daily run.
+          # data/learning is the discovery-memory file written by a real run.
           git add data/current data/archive
+          if [ -d data/learning ]; then
+            git add data/learning
+          fi
           if git diff --cached --quiet; then
             echo "No tracker changes to commit."
           else

@@ -196,6 +196,7 @@ class WorkdaySource(DiscoverySource):
         company: CompanyConfig | None = None,
         *,
         seed_page: dict[str, Any] | None = None,
+        skip_partitions: bool = False,
     ) -> SourceResult:
         """CXS and HTML fallback are recorded separately. HTTP 400 is never EMPTY."""
         label = company.name if company else "*"
@@ -318,7 +319,7 @@ class WorkdaySource(DiscoverySource):
         cxs_diag["unfiltered_fresh_jobs"] = self._fresh_count(jobs)
         cxs_diag["estimated_incomplete"] = bool(cxs_diag.get("source_list_cap_reached"))
         cxs_diag["recovered_fresh_jobs"] = 0
-        if cxs_diag.get("source_list_cap_reached"):
+        if cxs_diag.get("source_list_cap_reached") and not skip_partitions:
             jobs, partition_diag = await self._search_partitions(
                 host,
                 tenant,

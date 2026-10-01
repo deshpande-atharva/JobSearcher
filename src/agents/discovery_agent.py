@@ -18,6 +18,7 @@ from src.services.ats_discovery import (
     detect_ats_from_url,
 )
 from src.services.ats_registry import AtsRegistry, load_ats_registry
+from src.services.discovery_learning import assign_strategy, effort_for_company
 from src.services.freshness import is_fresh
 from src.sources import COMPANY_SOURCES, GLOBAL_SOURCES
 from src.sources.base import (
@@ -226,6 +227,7 @@ async def _discover_company(
     if not company.discovery.enabled:
         return posts, outcomes
 
+    effort = effort_for_company(state, company.name)
     resolved, method = await resolve_company_ats(state, ctx, registry, company)
     ats_jobs: list[RawJobPosting] = []
     ats_failed = False
@@ -235,7 +237,15 @@ async def _discover_company(
         if source_cls and source_cls(ctx).enabled:
             started = time.perf_counter()
             if resolved.ats_type == "workday":
-                result = await _measure_effort(_discover_workday(state, ctx, source_cls, resolved))
+                result = await _measure_effort(
+                    _discover_workday(
+                        state,
+                        ctx,
+                        source_cls,
+                        resolved,
+                        skip_partitions=effort == "monitor",
+                    )
+                )
             else:
                 result = await _measure_effort(source_cls(ctx).discover_result(resolved))
             _record(state, result, company=company.name)
@@ -256,14 +266,20 @@ async def _discover_company(
                 )
             if result.success:
                 ats_jobs = result.jobs
+                for posting in result.jobs:
+                    assign_strategy(posting, origin="configured")
                 posts.extend(result.jobs)
             else:
                 ats_failed = True
 
     want_careers = company.wants_source("company_careers") and _CAREER_SOURCE(ctx).enabled
+    # Monitor still fetches the ATS list. It skips the career page when that list
+    # already returned jobs. An empty or failed ATS list can still fall back.
     # Career page runs when there is no ATS, ATS failed, or ATS returned nothing.
     fallback = bool(resolved.has_structured_discovery and (ats_failed or not ats_jobs))
     reason = _career_fallback_reason(resolved, method, ats_failed, ats_jobs)
+    if effort == "monitor" and ats_jobs:
+        reason = None
     if want_careers and reason is not None and _CAREER_SOURCE(ctx).supports(company):
         started = time.perf_counter()
         budget = state.config.settings.discovery.career_stage_budget_seconds
@@ -293,6 +309,8 @@ async def _discover_company(
             )
         )
         if result.success:
+            for posting in result.jobs:
+                assign_strategy(posting, origin="configured")
             posts.extend(result.jobs)
 
     if not outcomes:
@@ -390,12 +408,17 @@ async def _discover_workday(
     ctx: SourceContext,
     source_cls: type[DiscoverySource],
     company: CompanyConfig,
+    *,
+    skip_partitions: bool = False,
 ) -> SourceResult:
     """Bound Workday CXS concurrency without serializing other ATS adapters."""
     limit = state.config.settings.discovery.sources.workday.max_concurrency
     semaphore = state.resources.setdefault("workday_semaphore", asyncio.Semaphore(limit))
     async with semaphore:
-        result = await source_cls(ctx).discover_result(company)
+        if skip_partitions:
+            result = await source_cls(ctx).discover_result(company, skip_partitions=True)
+        else:
+            result = await source_cls(ctx).discover_result(company)
     from src.pilot.workday_target import browser_discovery_enabled, discover_target_jobs, workday_board_url
 
     if not browser_discovery_enabled(state.config):
@@ -566,6 +589,8 @@ def _remember_source(unique: list[RawJobPosting], key: str, incoming: RawJobPost
             _remember_source_on(posting, incoming.source)
             for item in incoming.provenance.get("discovered_from") or []:
                 _remember_source_on(posting, str(item))
+            if not posting.provenance.get("strategy_id") and incoming.provenance.get("strategy_id"):
+                posting.provenance["strategy_id"] = incoming.provenance["strategy_id"]
             _remember_partitions(posting, incoming)
             _merge_authoritative_timestamp(posting, incoming)
             return

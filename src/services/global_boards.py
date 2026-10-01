@@ -18,6 +18,7 @@ from dataclasses import dataclass
 from src.models.config import CompanyConfig, CompanyDiscoveryBlock
 from src.models.job import RawJobPosting
 from src.models.state import PipelineState
+from src.services.discovery_learning import assign_strategy, board_selection_kwargs
 from src.services.public_board_index import (
     ASHBY_HOST,
     PublicBoardIndex,
@@ -322,7 +323,12 @@ async def _collect_kind(
             tally.configured_overlap += 1
             continue
         fresh.append(token)
-    chosen = select_board_tokens(fresh, limit=limit, now=now)
+    chosen = select_board_tokens(
+        fresh,
+        limit=limit,
+        now=now,
+        **board_selection_kwargs(state, kind),
+    )
     tally.selected = len(chosen)
     if not chosen:
         return [], tally
@@ -387,6 +393,7 @@ async def _one_board(ctx: SourceContext, kind: str, token: str):
         found = posting.provenance.setdefault("discovered_from", [])
         if "global_index" not in found:
             found.append("global_index")
+        assign_strategy(posting, origin="global_index")
     if not result.jobs:
         return [], "empty", result, name
     if result.diagnostics.get("cap_reached") or result.diagnostics.get("source_list_cap_reached"):

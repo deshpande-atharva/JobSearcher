@@ -118,6 +118,9 @@ async def run_pipeline(config: AppConfig, *, resources: dict[str, Any] | None = 
     state.resources["llm"] = llm
     state.resources["h1b"] = injected.get("h1b") or H1BGraderClient(config, http=http)
     state.summary.llm_enabled = bool(getattr(llm, "available", False))
+    from src.services.discovery_learning import prepare_learning
+
+    await prepare_learning(state)
 
     try:
         compiled = build_graph()

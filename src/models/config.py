@@ -340,6 +340,33 @@ class GreenhousePilotSettings(_Base):
     report_dir: str = "data/reports"
 
 
+class LearningSettings(_Base):
+    """How previous qualified outcomes change the next run's discovery effort.
+
+    Empty memory keeps full company crawls and the UTC-date board rotation.
+    Shares and weights live here so the scorer does not hard-code them.
+    """
+
+    enabled: bool = True
+    path: str = "data/learning/discovery_memory.json"
+    exploration_share: float = Field(default=0.20, ge=0, le=1)
+    revisit_share: float = Field(default=0.10, ge=0, le=1)
+    cooldown_runs: int = Field(default=3, ge=1)
+    revisit_runs: int = Field(default=2, ge=1)
+    min_runs_before_suppression: int = Field(default=2, ge=1)
+    novelty_weight: float = Field(default=1.0, ge=0)
+    exploration_bonus: float = Field(default=0.35, ge=0)
+    revisit_bonus: float = Field(default=0.20, ge=0)
+    recent_window: int = Field(default=3, ge=1, le=30)
+    max_run_history: int = Field(default=30, ge=1, le=365)
+
+    @model_validator(mode="after")
+    def _shares_fit(self) -> LearningSettings:
+        if self.exploration_share + self.revisit_share > 1:
+            raise ValueError("exploration_share + revisit_share must be <= 1")
+        return self
+
+
 class CandidateSettings(_Base):
     """Resume-derived profile. Search filters stay in ``filters`` and ``roles.yaml``."""
 
@@ -364,6 +391,7 @@ class Settings(_Base):
     fixtures: FixtureSettings = FixtureSettings()
     greenhouse_pilot: GreenhousePilotSettings = GreenhousePilotSettings()
     candidate: CandidateSettings = CandidateSettings()
+    learning: LearningSettings = LearningSettings()
 
 
 # ---------------------------------------------------------------------------
