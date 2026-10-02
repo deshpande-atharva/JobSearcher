@@ -340,6 +340,50 @@ class GreenhousePilotSettings(_Base):
     report_dir: str = "data/reports"
 
 
+class BoardSearchStrategyConfig(_Base):
+    """One profile query. Qualification still decides whether a job is kept."""
+
+    strategy_id: str
+    query: str
+    role_family: str = ""
+
+
+def _default_board_strategies() -> tuple[BoardSearchStrategyConfig, ...]:
+    rows = (
+        ("software_engineer", "software engineer", "software"),
+        ("backend_engineer", "backend engineer", "backend"),
+        ("platform_engineer", "platform engineer", "platform"),
+        ("frontend_engineer", "frontend engineer", "frontend"),
+        ("full_stack_engineer", "full stack engineer", "full_stack"),
+        ("devops_engineer", "devops engineer", "devops"),
+        ("sre", "site reliability engineer", "sre"),
+        ("cloud_engineer", "cloud engineer", "cloud"),
+        ("new_grad_software_engineer", "new grad software engineer", "new_grad"),
+    )
+    return tuple(
+        BoardSearchStrategyConfig(strategy_id=strategy_id, query=query, role_family=family)
+        for strategy_id, query, family in rows
+    )
+
+
+class BoardSearchSettings(_Base):
+    """Bounds for profile search. Playwright stays off until configured."""
+
+    enabled: bool = True
+    playwright_enabled: bool = False
+    max_strategies: int = Field(default=4, ge=1, le=12)
+    max_pages: int = Field(default=2, ge=1, le=5)
+    max_results_per_search: int = Field(default=20, ge=1, le=50)
+    max_pagination: int = Field(default=1, ge=0, le=5)
+    max_browser_seconds: float = Field(default=30.0, gt=0, le=120)
+    max_retries: int = Field(default=1, ge=0, le=3)
+    max_sites_per_run: int = Field(default=2, ge=0, le=8)
+    boards: tuple[str, ...] = ("workday", "greenhouse", "ashby", "lever")
+    strategies: tuple[BoardSearchStrategyConfig, ...] = Field(
+        default_factory=_default_board_strategies
+    )
+
+
 class LearningSettings(_Base):
     """How previous qualified outcomes change the next run's discovery effort.
 
@@ -392,6 +436,7 @@ class Settings(_Base):
     greenhouse_pilot: GreenhousePilotSettings = GreenhousePilotSettings()
     candidate: CandidateSettings = CandidateSettings()
     learning: LearningSettings = LearningSettings()
+    board_search: BoardSearchSettings = Field(default_factory=lambda: BoardSearchSettings())
 
 
 # ---------------------------------------------------------------------------

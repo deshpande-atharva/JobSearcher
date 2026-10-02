@@ -72,6 +72,8 @@ class DiscoveryPlan:
     revisit_bonus: float = 0.20
     reason: str = ""
     explanation: str = ""
+    board_searches: list[Any] = field(default_factory=list)
+    board_search_learned: bool = False
 
     def effort_for(self, company_key: str) -> str:
         if not self.active:
@@ -105,6 +107,7 @@ def empty_memory() -> dict[str, Any]:
         "sources": {},
         "strategies": {},
         "boards": {},
+        "board_searches": {},
         "runs": [],
     }
 
@@ -125,7 +128,7 @@ def load_memory(path: Path) -> LoadedMemory:
         log.warning("learning memory version is not supported; leaving the file unchanged")
         return LoadedMemory(empty_memory(), False, path)
     memory = empty_memory()
-    for key in ("companies", "sources", "strategies", "boards"):
+    for key in ("companies", "sources", "strategies", "boards", "board_searches"):
         value = payload.get(key, {})
         if not isinstance(value, dict):
             log.warning("learning memory shape is invalid; leaving the file unchanged")
@@ -165,7 +168,11 @@ def score_novelty(
     return score
 
 
-def build_discovery_plan(memory: dict[str, Any], settings: Any) -> DiscoveryPlan:
+def build_discovery_plan(
+    memory: dict[str, Any],
+    settings: Any,
+    board_search: Any = None,
+) -> DiscoveryPlan:
     """Plan from stored counts. One run of history cannot move a company to monitor."""
     plan = DiscoveryPlan(
         active=True,
@@ -201,6 +208,7 @@ def build_discovery_plan(memory: dict[str, Any], settings: Any) -> DiscoveryPlan
         plan.reason = "no learning history; current discovery behavior"
     else:
         plan.reason = "no company is in monitor"
+    _attach_board_searches(plan, memory, settings, board_search)
     return plan
 
 
@@ -225,6 +233,7 @@ def update_memory(
     settings: Any,
     run_id: str,
     now: datetime | None = None,
+    attempts: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Record qualified new and repeat jobs. Companies absent from ``jobs`` are unchanged."""
     updated = deepcopy(memory) if memory else empty_memory()
@@ -241,6 +250,9 @@ def update_memory(
     _update_sources(updated, jobs, settings=settings, day=day)
     _update_strategies(updated, jobs, settings=settings, day=day)
     _update_boards(updated, jobs, settings=settings, day=day)
+    from src.services.board_search import apply_board_search_outcomes
+
+    apply_board_search_outcomes(updated, jobs, attempts, settings)
 
     qualified = len(jobs)
     new_jobs = sum(1 for job in jobs if bool(getattr(job, "is_new", False)))
@@ -334,7 +346,11 @@ async def prepare_learning(state: Any) -> None:
     loaded = load_memory(path)
     state.resources["discovery_memory_loaded"] = loaded
     if loaded.writable:
-        plan = build_discovery_plan(loaded.memory, settings)
+        plan = build_discovery_plan(
+            loaded.memory,
+            settings,
+            state.config.settings.board_search,
+        )
     else:
         plan = neutral_plan(settings)
         plan.reason = "learning file unreadable; using current discovery behavior"
@@ -347,6 +363,7 @@ async def annotate_plan(plan: DiscoveryPlan, llm: Any) -> DiscoveryPlan:
         return plan
     priorities = dict(plan.strategy_priority)
     efforts = dict(plan.company_effort)
+    searches = list(plan.board_searches)
     try:
         note = await llm.structured(
             prompt=_explanation_prompt(plan),
@@ -361,9 +378,11 @@ async def annotate_plan(plan: DiscoveryPlan, llm: Any) -> DiscoveryPlan:
         log.warning("learning explanation unavailable", error=type(exc).__name__)
         plan.strategy_priority = priorities
         plan.company_effort = efforts
+        plan.board_searches = searches
         return plan
     plan.strategy_priority = priorities
     plan.company_effort = efforts
+    plan.board_searches = searches
     text = str(getattr(note, "reason", "") or "").strip()
     if text:
         plan.explanation = text[:500]
@@ -397,9 +416,16 @@ def persist_learning(state: Any) -> None:
             )
         return
     run_id = _run_id(state)
-    memory = update_memory(loaded.memory, jobs=jobs, settings=settings, run_id=run_id)
+    attempts = list(state.resources.get("board_search_attempts") or [])
+    memory = update_memory(
+        loaded.memory,
+        jobs=jobs,
+        settings=settings,
+        run_id=run_id,
+        attempts=attempts,
+    )
     save_memory(path, memory)
-    plan = build_discovery_plan(memory, settings)
+    plan = build_discovery_plan(memory, settings, state.config.settings.board_search)
     state.resources["discovery_plan"] = plan
     state.resources["discovery_memory_loaded"] = LoadedMemory(memory, True, path)
     state.summary.learning_report = render_learning_report(memory, plan)
@@ -446,7 +472,64 @@ def render_learning_report(memory: dict[str, Any], plan: DiscoveryPlan) -> str:
         lines.append(f"Note: {plan.explanation}")
     elif plan.reason:
         lines.append(f"Plan: {plan.reason}")
+    summary = _board_search_summary(memory, plan)
+    if summary:
+        lines.extend(summary)
     return "\n".join(lines)
+
+
+def _attach_board_searches(
+    plan: DiscoveryPlan,
+    memory: dict[str, Any],
+    settings: Any,
+    board_search: Any,
+) -> None:
+    from src.models.config import BoardSearchSettings
+    from src.services.board_search import allocate_board_searches
+
+    search = board_search if board_search is not None else BoardSearchSettings()
+    records = memory.get("board_searches") or {}
+    plan.board_search_learned = bool(records)
+    if not getattr(search, "enabled", True):
+        plan.board_searches = []
+        return
+    plan.board_searches = allocate_board_searches(
+        memory,
+        search,
+        exploration_share=float(settings.exploration_share),
+        revisit_share=float(settings.revisit_share),
+        novelty_weight=float(settings.novelty_weight),
+        exploration_bonus=float(settings.exploration_bonus),
+        revisit_bonus=float(settings.revisit_bonus),
+    )
+
+
+def _board_search_summary(memory: dict[str, Any], plan: DiscoveryPlan) -> list[str]:
+    records = memory.get("board_searches") or {}
+    if not records and not plan.board_searches:
+        return []
+    totals = {"api": {"qualified": 0, "new": 0}, "playwright": {"qualified": 0, "new": 0}}
+    for record in records.values():
+        if not isinstance(record, dict):
+            continue
+        method = str(record.get("method") or "")
+        if method not in totals:
+            continue
+        recent = record.get("recent") or []
+        last = recent[-1] if recent else {}
+        totals[method]["qualified"] += int(last.get("qualified") or 0)
+        totals[method]["new"] += int(last.get("new") or 0)
+    lines = [
+        "GLOBAL DISCOVERY",
+        f"API qualified={totals['api']['qualified']} new={totals['api']['new']}",
+        f"PLAYWRIGHT qualified={totals['playwright']['qualified']} new={totals['playwright']['new']}",
+    ]
+    shown = plan.board_searches[:4]
+    if shown:
+        lines.append("Next searches:")
+        for slot in shown:
+            lines.append(f"- {slot.board} {slot.strategy_id} {slot.method} ({slot.reason})")
+    return lines
 
 
 def _snapshot_memory(jobs: list[Any], settings: Any, state: Any) -> dict[str, Any]:

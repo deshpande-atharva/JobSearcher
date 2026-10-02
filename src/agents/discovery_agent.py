@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import time
+from urllib.parse import urlparse
 
 from src.models.config import CompanyConfig
 from src.models.job import DateSource, RawJobPosting
@@ -110,6 +111,13 @@ async def run_discovery(state: PipelineState) -> None:
     state.summary.failed_companies = failed
 
     discovered.extend(await global_task)
+
+    _stamp_board_search_provenance(discovered, state.config.settings.board_search)
+    _board_urls = _extract_board_urls(discovered)
+    _playwright_postings, _board_attempts = await _run_board_searches(state, ctx, _board_urls)
+    if _playwright_postings:
+        discovered.extend(_playwright_postings)
+    state.resources["board_search_attempts"] = _board_attempts
 
     raw_count = len(discovered)
     discovered = _dedupe_raw(discovered)
@@ -873,3 +881,223 @@ def _context(state: PipelineState) -> SourceContext:
     if http is None:
         raise SourceError("HTTP client was not injected into pipeline resources")
     return SourceContext(config=state.config, http=http, logger=log)
+
+
+def _stamp_board_search_provenance(
+    postings: list[RawJobPosting],
+    settings: object,
+) -> None:
+    """Stamp search_strategy_id, method, and board on Workday partition postings.
+
+    Only stamps postings from keyword partition searches (not unfiltered list).
+    Only postings whose source is in settings.boards.
+    Maps partition text to strategy_id via settings.strategies.
+    Does not overwrite an existing search_strategy_id.
+    """
+    boards = set(getattr(settings, "boards", ()) or ())
+    strategies = list(getattr(settings, "strategies", ()) or ())
+
+    # Build a map from query text -> strategy_id
+    query_to_strategy: dict[str, str] = {}
+    for strat in strategies:
+        query_lower = (strat.query or "").strip().lower()
+        if query_lower:
+            query_to_strategy[query_lower] = strat.strategy_id
+
+    for posting in postings:
+        provenance = getattr(posting, "provenance", None)
+        if not isinstance(provenance, dict):
+            continue
+        # Skip already-stamped
+        if provenance.get("search_strategy_id"):
+            continue
+        source = str(getattr(posting, "source", "") or "")
+        if source not in boards:
+            continue
+        if source != "workday":
+            continue
+        # Only stamp keyword partition postings (not the unfiltered list)
+        parts = [str(p) for p in (provenance.get("workday_partitions") or [])]
+        if not parts or "unfiltered" in parts:
+            continue
+        # Find matching strategy by partition text
+        matched_strategy = None
+        for part in parts:
+            part_lower = part.strip().lower()
+            matched_strategy = query_to_strategy.get(part_lower)
+            if matched_strategy:
+                break
+        if not matched_strategy:
+            # Try partial match
+            for part in parts:
+                part_lower = part.strip().lower()
+                for q, sid in query_to_strategy.items():
+                    if q in part_lower or part_lower in q:
+                        matched_strategy = sid
+                        break
+                if matched_strategy:
+                    break
+        if matched_strategy:
+            provenance["search_strategy_id"] = matched_strategy
+            provenance["method"] = "api"
+            provenance["board"] = source
+
+
+def _extract_board_urls(postings: list[RawJobPosting]) -> dict[str, list[str]]:
+    """Extract board base URLs from global-index postings for Playwright searches.
+
+    Returns dict mapping board name -> list of base URLs.
+    For Workday: host + first path segment.
+    For Greenhouse: https://boards.greenhouse.io/{token}
+    For Ashby: https://jobs.ashbyhq.com/{token}
+    """
+    result: dict[str, list[str]] = {}
+    seen: dict[str, set[str]] = {}
+
+    for posting in postings:
+        provenance = getattr(posting, "provenance", None) or {}
+        if not isinstance(provenance, dict):
+            continue
+        source = str(getattr(posting, "source", "") or "")
+
+        if source == "workday":
+            apply_url = getattr(posting, "apply_url", None) or ""
+            if not apply_url:
+                continue
+            try:
+                parsed = urlparse(apply_url)
+                path_parts = parsed.path.strip("/").split("/")
+                first_seg = path_parts[0] if path_parts else ""
+                base = f"{parsed.scheme}://{parsed.netloc}/{first_seg}" if first_seg else f"{parsed.scheme}://{parsed.netloc}"
+            except Exception:
+                continue
+            if base not in seen.setdefault("workday", set()):
+                seen["workday"].add(base)
+                result.setdefault("workday", []).append(base)
+
+        elif source in {"greenhouse", "ashby"}:
+            token = str(provenance.get("board_token") or "")
+            if not token:
+                continue
+            if source == "greenhouse":
+                url = f"https://boards.greenhouse.io/{token}"
+            else:  # ashby
+                url = f"https://jobs.ashbyhq.com/{token}"
+            if url not in seen.setdefault(source, set()):
+                seen[source].add(url)
+                result.setdefault(source, []).append(url)
+
+    return result
+
+
+async def _run_board_searches(
+    state: PipelineState,
+    ctx: object,
+    board_urls: dict[str, list[str]],
+) -> tuple[list[RawJobPosting], list[dict]]:
+    """Execute scheduled board search slots from plan.board_searches.
+
+    Returns (new_postings, attempt_records). NEVER raises.
+    """
+    plan = state.resources.get("discovery_plan")
+    if plan is None:
+        return [], []
+
+    slots = list(getattr(plan, "board_searches", ()) or ())
+    if not slots:
+        return [], []
+
+    board_search_settings = state.config.settings.board_search
+    playwright_enabled = getattr(board_search_settings, "playwright_enabled", False)
+    fixture_mode = getattr(state.config, "fixture_mode", False)
+    max_sites = int(getattr(board_search_settings, "max_sites_per_run", 2) or 2)
+    max_browser_seconds = float(getattr(board_search_settings, "max_browser_seconds", 30.0) or 30.0)
+
+    all_postings: list[RawJobPosting] = []
+    all_attempts: list[dict] = []
+    playwright_sessions_opened = 0
+
+    for slot in slots:
+        attempt: dict = {
+            "key": slot.key,
+            "board": slot.board,
+            "strategy_id": slot.strategy_id,
+            "method": slot.method,
+            "query": slot.query,
+        }
+
+        if slot.method == "api":
+            # API searches happen via existing partition logic - record attempt only
+            all_attempts.append(attempt)
+            continue
+
+        if slot.method == "playwright":
+            if not playwright_enabled or fixture_mode:
+                # Skip: record attempt only
+                all_attempts.append(attempt)
+                continue
+
+            if playwright_sessions_opened >= max_sites:
+                all_attempts.append(attempt)
+                continue
+
+            # Try to get a URL for this board
+            urls_for_board = board_urls.get(slot.board) or []
+            target_url: str | None = urls_for_board[0] if urls_for_board else None
+
+            if target_url is None:
+                # Fall back to configured companies with matching ats_type
+                for company in state.config.target_companies():
+                    if getattr(company, "ats_type", None) == slot.board:
+                        target_url = getattr(company, "careers_url", None)
+                        if target_url:
+                            break
+
+            if target_url is None:
+                all_attempts.append(attempt)
+                continue
+
+            # Execute Playwright search
+            try:
+                import src.browser.playwright_runtime as brt
+                from src.services.board_search import run_profile_search
+                from src.services.discovery_learning import assign_strategy
+
+                browser = brt.PlaywrightBrowser(
+                    headless=True,
+                    timeout_ms=int(max_browser_seconds * 1000),
+                )
+                await browser.start()
+                playwright_sessions_opened += 1
+                try:
+                    await browser.open(target_url)
+                    execution = await run_profile_search(
+                        browser,
+                        board=slot.board,
+                        strategy_id=slot.strategy_id,
+                        query=slot.query,
+                        company_name="",
+                    )
+                    for posting in execution.postings:
+                        assign_strategy(posting, origin="global_index")
+                    all_postings.extend(execution.postings)
+                    attempt["search_success"] = execution.search_success
+                    attempt["raw_jobs"] = execution.raw_jobs
+                finally:
+                    await browser.aclose()
+            except Exception as exc:
+                log.warning(
+                    "board playwright search failed",
+                    board=slot.board,
+                    strategy_id=slot.strategy_id,
+                    error=str(exc),
+                )
+                attempt["error"] = type(exc).__name__
+
+            all_attempts.append(attempt)
+            continue
+
+        # Unknown method - record attempt only
+        all_attempts.append(attempt)
+
+    return all_postings, all_attempts

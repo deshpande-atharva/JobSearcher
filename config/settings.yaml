@@ -336,6 +336,22 @@ greenhouse_pilot:
   navigation_dir: "data/navigation"
   report_dir: "data/reports"
 
+board_search:
+  enabled: true
+  playwright_enabled: false
+  max_strategies: 4
+  max_pages: 2
+  max_results_per_search: 20
+  max_pagination: 1
+  max_browser_seconds: 30.0
+  max_retries: 1
+  max_sites_per_run: 2
+  boards:
+    - workday
+    - greenhouse
+    - ashby
+    - lever
+
 candidate:
   resume_path: "data/candidate/resume.pdf"
   profile_path: "data/candidate/profile.json"
