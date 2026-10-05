@@ -41,8 +41,9 @@ def test_workflow_is_production_only_and_least_privilege() -> None:
     ):
         assert forbidden not in workflow
     run = workflow.split("name: Run pipeline", 1)[1].split("name: Commit generated tracker", 1)[0]
-    assert "python -m src.main\n" in run
-    assert "--" not in run
+    # Command may pipe through tee for log capture; core invocation must not carry flags.
+    assert "python -m src.main" in run
+    assert "python -m src.main --" not in run
     assert "resume.pdf" not in workflow
     assert "data/candidate" not in workflow
     assert "git add data/current data/archive" in workflow

@@ -943,11 +943,19 @@ def _stamp_board_search_provenance(
             provenance["board"] = source
 
 
+_LOCALE_SEG_RE = __import__("re").compile(r"^[a-z]{2}(-[A-Za-z]{2,4})?$")
+
+
 def _extract_board_urls(postings: list[RawJobPosting]) -> dict[str, list[str]]:
     """Extract board base URLs from global-index postings for Playwright searches.
 
     Returns dict mapping board name -> list of base URLs.
-    For Workday: host + first path segment.
+    For Workday: host + locale segment (if present) + site segment.
+      Workday apply_urls come in two forms:
+        - Modern: /{locale}/{site_name}/job/...  e.g. /en-US/external_experienced/job/...
+        - Legacy: /{site_name}/job/...            e.g. /external_experienced/job/...
+      We preserve the locale when present so Playwright lands on the correct
+      board listing page (the search control lives at /{locale}/{site} or /{site}).
     For Greenhouse: https://boards.greenhouse.io/{token}
     For Ashby: https://jobs.ashbyhq.com/{token}
     """
@@ -961,14 +969,26 @@ def _extract_board_urls(postings: list[RawJobPosting]) -> dict[str, list[str]]:
         source = str(getattr(posting, "source", "") or "")
 
         if source == "workday":
+            # Only extract board URLs from Internet Archive-discovered postings.
+            # Configured-company CXS postings have apply_urls that may lack the
+            # locale prefix (e.g. /external_experienced without /en-US/) and are
+            # not useful as Playwright targets — we already know those boards.
+            if provenance.get("board_origin") not in {"global_index", "global_snapshot_index"}:
+                continue
             apply_url = getattr(posting, "apply_url", None) or ""
             if not apply_url:
                 continue
             try:
                 parsed = urlparse(apply_url)
-                path_parts = parsed.path.strip("/").split("/")
-                first_seg = path_parts[0] if path_parts else ""
-                base = f"{parsed.scheme}://{parsed.netloc}/{first_seg}" if first_seg else f"{parsed.scheme}://{parsed.netloc}"
+                path_parts = [p for p in parsed.path.strip("/").split("/") if p]
+                if not path_parts:
+                    continue
+                # If first segment looks like a locale (e.g. "en-US", "en", "fr"),
+                # include it AND the next segment to get /{locale}/{site_name}.
+                if _LOCALE_SEG_RE.match(path_parts[0]) and len(path_parts) >= 2:
+                    base = f"{parsed.scheme}://{parsed.netloc}/{path_parts[0]}/{path_parts[1]}"
+                else:
+                    base = f"{parsed.scheme}://{parsed.netloc}/{path_parts[0]}"
             except Exception:
                 continue
             if base not in seen.setdefault("workday", set()):
@@ -988,6 +1008,32 @@ def _extract_board_urls(postings: list[RawJobPosting]) -> dict[str, list[str]]:
                 result.setdefault(source, []).append(url)
 
     return result
+
+
+_ATS_BOARD_HOSTS: dict[str, tuple[str, ...]] = {
+    "workday": ("myworkdayjobs.com", "myworkdaysite.com"),
+    "greenhouse": ("boards.greenhouse.io", "job-boards.greenhouse.io"),
+    "ashby": ("jobs.ashbyhq.com",),
+    "lever": ("jobs.lever.co",),
+}
+_AGGREGATOR_URL_PATTERNS = ("linkedin.com", "indeed.com", "glassdoor.com")
+
+
+def _is_ats_board_url(url: str | None, board: str) -> bool:
+    """True when url is plausibly a real ATS board search page for the given board type.
+
+    Rejects marketing pages, aggregators, and URLs that don't match the expected
+    ATS host pattern. A valid Workday board URL must contain myworkdayjobs.com.
+    """
+    if not url or not url.startswith(("http://", "https://")):
+        return False
+    try:
+        host = urlparse(url.strip()).netloc.lower()
+    except Exception:
+        return False
+    if any(name in host for name in _AGGREGATOR_URL_PATTERNS):
+        return False
+    return any(pattern in host for pattern in _ATS_BOARD_HOSTS.get(board, ()))
 
 
 async def _run_board_searches(
@@ -1027,37 +1073,62 @@ async def _run_board_searches(
         }
 
         if slot.method == "api":
-            # API searches happen via existing partition logic - record attempt only
+            # API keyword partition searches run inside global board collection,
+            # not here. If no globally discovered boards of this type exist in
+            # this run (CDX unavailable or no boards collected), the partitions
+            # had no target and must be treated as skipped so learning is not
+            # penalized with spurious zero-new observations.
+            urls_for_board = board_urls.get(slot.board) or []
+            if not urls_for_board:
+                attempt["skipped"] = True
+                attempt["skip_reason"] = "no_global_board_target"
             all_attempts.append(attempt)
             continue
 
         if slot.method == "playwright":
             if not playwright_enabled or fixture_mode:
-                # Skip: record attempt only
+                # Skipped: not executed - must NOT count as zero-new in learning
+                attempt["skipped"] = True
+                attempt["skip_reason"] = "playwright_disabled"
                 all_attempts.append(attempt)
                 continue
 
             if playwright_sessions_opened >= max_sites:
+                # Budget exhausted: not executed - must NOT count as zero-new
+                attempt["skipped"] = True
+                attempt["skip_reason"] = "budget_exhausted"
                 all_attempts.append(attempt)
                 continue
 
-            # Try to get a URL for this board
+            # Only use board URLs discovered by the CDX public index (global_index).
+            # Configured board_url from companies.yaml must NEVER be used here:
+            # those boards are already fully covered by configured CXS discovery,
+            # so Playwright would only find jobs already known to dedup.  When
+            # CDX is unavailable and no global board URLs exist, skip cleanly.
             urls_for_board = board_urls.get(slot.board) or []
             target_url: str | None = urls_for_board[0] if urls_for_board else None
 
             if target_url is None:
-                # Fall back to configured companies with matching ats_type
-                for company in state.config.target_companies():
-                    if getattr(company, "ats_type", None) == slot.board:
-                        target_url = getattr(company, "careers_url", None)
-                        if target_url:
-                            break
-
-            if target_url is None:
+                # No CDX-discovered board available: skip cleanly.
+                # This is NOT an observation and must NOT penalize learning.
+                attempt["skipped"] = True
+                attempt["skip_reason"] = "no_global_board_target"
+                log.info(
+                    "playwright board search skipped: no global board URL available",
+                    board=slot.board,
+                    strategy_id=slot.strategy_id,
+                )
                 all_attempts.append(attempt)
                 continue
 
-            # Execute Playwright search
+            # Execute Playwright search against a CDX-discovered global board.
+            log.info(
+                "playwright board search executing",
+                board=slot.board,
+                strategy_id=slot.strategy_id,
+                target_url=target_url,
+                url_source="global_index",
+            )
             try:
                 import src.browser.playwright_runtime as brt
                 from src.services.board_search import run_profile_search
@@ -1067,10 +1138,15 @@ async def _run_board_searches(
                     headless=True,
                     timeout_ms=int(max_browser_seconds * 1000),
                 )
+                t0 = time.monotonic()
                 await browser.start()
                 playwright_sessions_opened += 1
                 try:
                     await browser.open(target_url)
+                    # SPA boards (Workday, Greenhouse) render their search input via
+                    # JavaScript after domcontentloaded. settle() waits up to 15s for
+                    # public job links, which confirms the SPA has fully rendered.
+                    await browser.settle()
                     execution = await run_profile_search(
                         browser,
                         board=slot.board,
@@ -1083,8 +1159,20 @@ async def _run_board_searches(
                     all_postings.extend(execution.postings)
                     attempt["search_success"] = execution.search_success
                     attempt["raw_jobs"] = execution.raw_jobs
+                    attempt["applied_filters"] = execution.applied_filters
+                    attempt["requested_filters"] = execution.requested_filters
+                    log.info(
+                        "playwright board search result",
+                        board=slot.board,
+                        strategy_id=slot.strategy_id,
+                        target_url=target_url,
+                        search_success=execution.search_success,
+                        raw_jobs=execution.raw_jobs,
+                        postings=len(execution.postings),
+                    )
                 finally:
                     await browser.aclose()
+                attempt["duration_seconds"] = round(time.monotonic() - t0, 2)
             except Exception as exc:
                 log.warning(
                     "board playwright search failed",

@@ -13,7 +13,7 @@ from __future__ import annotations
 import asyncio
 import re
 import time
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from urllib.parse import urlparse
 
 from src.models.config import CompanyConfig, CompanyDiscoveryBlock
@@ -21,7 +21,6 @@ from src.models.job import RawJobPosting
 from src.models.state import PipelineState
 from src.services.discovery_learning import assign_strategy, board_selection_kwargs
 from src.services.public_board_index import (
-    WORKDAY_DOMAINS,
     PublicBoardIndex,
     parse_cdx_workday,
     parse_public_workday_board,
@@ -31,6 +30,7 @@ from src.services.public_board_index import (
     workday_board_identity,
     workday_career_url,
     workday_clusters_for_run,
+    workday_snapshot_query_url,
 )
 from src.sources.base import SourceContext, SourceResult
 from src.sources.workday import CXS_PAGE_SIZE, WorkdaySource, cxs_request_body
@@ -43,6 +43,7 @@ __all__ = [
     "configured_workday_clusters",
     "configured_workday_identities",
     "load_workday_archive_sample",
+    "load_workday_snapshot_fallback",
 ]
 
 _TITLE = re.compile(r"<title[^>]*>(.*?)</title>", re.IGNORECASE | re.DOTALL)
@@ -55,23 +56,30 @@ async def load_workday_archive_sample(
     limit: int,
     now: datetime | None,
     prefixes_per_run: int,
-) -> tuple[list[str], str]:
+    snapshot_fallback_enabled: bool = True,
+    snapshot_window_days: int = 30,
+    snapshot_max_queries: int = 4,
+    snapshot_timeout_seconds: float = 15.0,
+    snapshot_max_candidates: int = 40,
+    snapshot_concurrency: int = 2,
+) -> tuple[list[str], str, str]:
     """A few Archive CDX pages. Never raises. An empty sample is not a run failure."""
     chosen = workday_clusters_for_run(clusters, now, count=2)
     prefixes = prefixes_for_day(now, prefixes_per_run)
+    # Only query myworkdayjobs.com. myworkdaysite.com CDX returns student portals
+    # (e.g. wd1-student.myworkdaysite.com) that have no wdN-based career-board path
+    # structure and produce zero valid boards from parse_public_workday_board.
     queries: list[str] = []
-    for index, cluster in enumerate(chosen):
-        domains = WORKDAY_DOMAINS if index == 0 else frozenset({"myworkdayjobs.com"})
-        for domain in sorted(domains):
-            for prefix in prefixes:
-                queries.append(
-                    workday_archive_query_url(
-                        domain=domain,
-                        cluster=cluster,
-                        prefix=prefix,
-                        limit=limit,
-                    )
+    for cluster in chosen:
+        for prefix in prefixes:
+            queries.append(
+                workday_archive_query_url(
+                    domain="myworkdayjobs.com",
+                    cluster=cluster,
+                    prefix=prefix,
+                    limit=limit,
                 )
+            )
     bodies = await asyncio.gather(*(_cdx_body(ctx, url) for url in queries))
     found: list[str] = []
     seen = 0
@@ -80,6 +88,13 @@ async def load_workday_archive_sample(
         seen += count
         found.extend(urls)
     unique = select_workday_boards(found, limit=len(found) or 0, now=now)
+    log.info(
+        "cdx_workday_sample_complete",
+        service="internet_archive_cdx",
+        queries=len(queries),
+        urls_seen=seen,
+        boards_found=len(unique),
+    )
     detail = (
         f"Internet Archive CDX sample for Workday clusters {', '.join(chosen)} "
         f"prefixes {''.join(prefixes)!r}; GLOBAL DISCOVERY: PARTIAL COVERAGE. "
@@ -91,7 +106,27 @@ async def load_workday_archive_sample(
             "GLOBAL DISCOVERY: PARTIAL COVERAGE"
         )
         log.warning("workday public board sample empty")
-    return unique, detail
+    if unique:
+        return unique, detail, "global_index"
+    if not unique and snapshot_fallback_enabled:
+        fallback = await load_workday_snapshot_fallback(
+            ctx,
+            clusters=clusters,
+            limit=snapshot_max_candidates,
+            now=now,
+            window_days=snapshot_window_days,
+            max_queries=snapshot_max_queries,
+            timeout_seconds=snapshot_timeout_seconds,
+            concurrency=snapshot_concurrency,
+        )
+        if fallback:
+            fallback_detail = (
+                f"Wayback Snapshot Index fallback (CDX unavailable); "
+                f"clusters {', '.join(chosen)}; {len(fallback)} board(s) found. "
+                "GLOBAL DISCOVERY: PARTIAL COVERAGE."
+            )
+            return fallback, fallback_detail, "global_snapshot_index"
+    return unique, detail, "global_index"
 
 
 def configured_workday_clusters(state: PipelineState) -> tuple[str, ...]:
@@ -133,6 +168,7 @@ async def collect_global_workday(
     index: PublicBoardIndex,
     limit: int,
     now: datetime | None,
+    board_origin: str = "global_index",
 ) -> tuple[list[RawJobPosting], dict[str, object]]:
     """Validate new boards and collect them with the existing CXS adapter."""
     configured = configured_workday_identities(state)
@@ -202,7 +238,7 @@ async def collect_global_workday(
             started = time.perf_counter()
             try:
                 batch, label, result, name = await asyncio.wait_for(
-                    _one_board(state, ctx, url, collected_identities),
+                    _one_board(state, ctx, url, collected_identities, board_origin=board_origin),
                     timeout=timeout,
                 )
             except TimeoutError:
@@ -273,6 +309,7 @@ async def _one_board(
     ctx: SourceContext,
     url: str,
     collected_identities: set[str],
+    board_origin: str = "global_index",
 ):
     parsed = parse_public_workday_board(url)
     if parsed is None:
@@ -328,12 +365,15 @@ async def _one_board(
     if not result.success:
         return [], "failed", result, name
     for posting in result.jobs:
-        posting.provenance["board_origin"] = "global_index"
+        posting.provenance["board_origin"] = board_origin
         posting.provenance["board_identity"] = f"{host}|{tenant}|{site.lower()}"
         found = posting.provenance.setdefault("discovered_from", [])
-        if "global_index" not in found:
-            found.append("global_index")
-        assign_strategy(posting, origin="global_index")
+        discovered_tag = (
+            "wayback_snapshot_index" if board_origin == "global_snapshot_index" else "global_index"
+        )
+        if discovered_tag not in found:
+            found.append(discovered_tag)
+        assign_strategy(posting, origin="global_index")  # always "global_index" for learning semantics
     capped = bool(result.diagnostics.get("source_list_cap_reached"))
     incomplete = bool(result.diagnostics.get("estimated_incomplete"))
     if capped or incomplete:
@@ -441,8 +481,153 @@ async def _cdx_body(ctx: SourceContext, url: str) -> str:
             ctx.http.request("GET", url, headers={"Accept": "application/json"}),
             timeout=12,
         )
-    except Exception:
+    except asyncio.TimeoutError:
+        log.warning("cdx_timeout", service="internet_archive_cdx", timeout_seconds=12)
         return ""
-    if getattr(result, "blocked_by_robots", False) or not result.ok:
+    except OSError as exc:
+        log.warning(
+            "cdx_connection_error",
+            service="internet_archive_cdx",
+            error=type(exc).__name__,
+        )
         return ""
-    return result.text or ""
+    except Exception as exc:
+        log.warning(
+            "cdx_request_error",
+            service="internet_archive_cdx",
+            error=type(exc).__name__,
+        )
+        return ""
+    if getattr(result, "blocked_by_robots", False):
+        log.warning("cdx_blocked_by_robots", service="internet_archive_cdx")
+        return ""
+    if not result.ok:
+        log.warning(
+            "cdx_http_error",
+            service="internet_archive_cdx",
+            http_status=result.status,
+        )
+        return ""
+    body = result.text or ""
+    log.debug(
+        "cdx_response_ok",
+        service="internet_archive_cdx",
+        http_status=result.status,
+        response_bytes=len(body),
+    )
+    return body
+
+
+async def _snapshot_body(ctx: SourceContext, url: str, timeout_seconds: float) -> str:
+    """One Snapshot Index CDX request. Same semantics as _cdx_body, different log events."""
+    try:
+        result = await asyncio.wait_for(
+            ctx.http.request("GET", url, headers={"Accept": "application/json"}),
+            timeout=timeout_seconds,
+        )
+    except asyncio.TimeoutError:
+        log.warning(
+            "snapshot_index_timeout",
+            service="internet_archive_cdx",
+            timeout_seconds=timeout_seconds,
+        )
+        return ""
+    except OSError as exc:
+        log.warning(
+            "snapshot_index_connection_error",
+            service="internet_archive_cdx",
+            error=type(exc).__name__,
+        )
+        return ""
+    except Exception as exc:
+        log.warning(
+            "snapshot_index_request_error",
+            service="internet_archive_cdx",
+            error=type(exc).__name__,
+        )
+        return ""
+    if getattr(result, "blocked_by_robots", False):
+        log.warning("snapshot_index_http_error", service="internet_archive_cdx", http_status="blocked")
+        return ""
+    if not result.ok:
+        log.warning(
+            "snapshot_index_http_error",
+            service="internet_archive_cdx",
+            http_status=result.status,
+        )
+        return ""
+    body = result.text or ""
+    log.debug(
+        "snapshot_index_response_ok",
+        service="internet_archive_cdx",
+        response_bytes=len(body),
+    )
+    return body
+
+
+async def load_workday_snapshot_fallback(
+    ctx: SourceContext,
+    *,
+    clusters: tuple[str, ...],
+    limit: int,
+    now: datetime | None,
+    window_days: int = 30,
+    max_queries: int = 4,
+    timeout_seconds: float = 15.0,
+    concurrency: int = 2,
+) -> list[str]:
+    """CDX date-range fallback for when resumeKey CDX returns no boards.
+
+    Queries CDX using per-cluster domain + date-window instead of SURT-position
+    resumeKey. Cheaper to serve; different rate-limit surface. Uses the same
+    parse_cdx_workday validator as CDX — invalid URLs are rejected identically.
+
+    Never raises. Returns an empty list if all queries fail or find nothing.
+    """
+    moment = now if now is not None else datetime.now(timezone.utc)
+    to_date = moment.strftime("%Y%m%d%H%M%S")
+    from_date = (moment - timedelta(days=window_days)).strftime("%Y%m%d%H%M%S")
+    chosen = workday_clusters_for_run(clusters, now, count=2)
+    queries = [
+        workday_snapshot_query_url(
+            cluster=cluster,
+            from_date=from_date,
+            to_date=to_date,
+            limit=limit,
+        )
+        for cluster in chosen
+    ][:max_queries]
+    log.info(
+        "snapshot_index_request_started",
+        service="internet_archive_cdx",
+        clusters=list(chosen),
+        window_days=window_days,
+        queries=len(queries),
+    )
+    semaphore = asyncio.Semaphore(concurrency)
+
+    async def one(url: str) -> str:
+        async with semaphore:
+            return await _snapshot_body(ctx, url, timeout_seconds)
+
+    bodies = await asyncio.gather(*(one(url) for url in queries))
+    found: list[str] = []
+    seen = 0
+    for body in bodies:
+        urls, count = parse_cdx_workday(body)
+        seen += count
+        found.extend(urls)
+    unique = select_workday_boards(found, limit=limit, now=now)
+    log.info(
+        "snapshot_index_candidates_found",
+        service="internet_archive_cdx",
+        urls_seen=seen,
+        boards_found=len(unique),
+    )
+    if unique:
+        log.info(
+            "snapshot_index_fallback_used",
+            service="internet_archive_cdx",
+            boards=len(unique),
+        )
+    return unique

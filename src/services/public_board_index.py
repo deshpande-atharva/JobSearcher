@@ -22,6 +22,10 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from urllib.parse import quote, unquote, urlparse
 
+from src.utils.logging import get_logger
+
+log = get_logger(__name__)
+
 __all__ = [
     "ARCHIVE_CDX",
     "ASHBY_HOST",
@@ -39,6 +43,7 @@ __all__ = [
     "workday_archive_query_url",
     "workday_board_identity",
     "workday_clusters_for_run",
+    "workday_snapshot_query_url",
 ]
 
 ASHBY_HOST = "jobs.ashbyhq.com"
@@ -117,6 +122,7 @@ class PublicBoardIndex:
     prefix: str = ""
     index_source: str = "internet_archive_cdx"
     index_seconds: float = 0.0
+    workday_board_origin: str = "global_index"
 
 
 def valid_board_token(token: str) -> bool:
@@ -254,6 +260,11 @@ def _cdx_rows(body: str) -> list[dict[str, str]]:
         try:
             payload = json.loads(text)
         except json.JSONDecodeError:
+            log.warning(
+                "cdx_json_parse_failure",
+                service="internet_archive_cdx",
+                response_bytes=len(text),
+            )
             return []
         if not isinstance(payload, list) or not payload:
             return []
@@ -321,6 +332,24 @@ def workday_archive_query_url(*, domain: str, cluster: str, prefix: str, limit: 
         f"{ARCHIVE_CDX}?url={quote(domain)}&matchType=domain&output=json"
         f"&fl=original,statuscode&filter=statuscode:200&limit={int(limit)}"
         f"&collapse=urlkey&resumeKey={quote(resume, safe='')}"
+    )
+
+
+def workday_snapshot_query_url(*, cluster: str, from_date: str, to_date: str, limit: int) -> str:
+    """CDX date-range query for a Workday cluster. No resumeKey — cheaper than position-seeking.
+
+    Uses per-cluster domain matching (*.wdN.myworkdayjobs.com) with an archive
+    date window instead of SURT-position resumeKey pagination.
+
+    from_date / to_date: CDX timestamp format YYYYMMDDHHMMSS or YYYYMMDD.
+    """
+    if not re.fullmatch(r"wd\d{1,3}", cluster or ""):
+        raise ValueError("workday cluster must look like wd5")
+    domain = f"{cluster}.myworkdayjobs.com"
+    return (
+        f"{ARCHIVE_CDX}?url={quote(domain)}&matchType=domain&output=json"
+        f"&fl=original,statuscode&filter=statuscode:200&limit={int(limit)}"
+        f"&collapse=urlkey&from={from_date}&to={to_date}"
     )
 
 

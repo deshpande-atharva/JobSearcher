@@ -101,6 +101,12 @@ async def resolve_public_board_index(state: PipelineState, ctx: SourceContext) -
                 limit=settings.max_index_urls,
                 now=state.summary.run_started_at,
                 prefixes_per_run=settings.prefixes_per_run,
+                snapshot_fallback_enabled=settings.workday_snapshot_fallback_enabled,
+                snapshot_window_days=settings.workday_snapshot_window_days,
+                snapshot_max_queries=settings.workday_snapshot_max_queries,
+                snapshot_timeout_seconds=settings.workday_snapshot_timeout_seconds,
+                snapshot_max_candidates=settings.workday_snapshot_max_candidates,
+                snapshot_concurrency=settings.workday_snapshot_concurrency,
             )
         )
     try:
@@ -128,9 +134,10 @@ async def resolve_public_board_index(state: PipelineState, ctx: SourceContext) -
     if workday_task is not None:
         remaining = settings.index_timeout_seconds - (time.monotonic() - started)
         try:
-            urls, detail = await asyncio.wait_for(workday_task, timeout=max(remaining, 0.1))
+            urls, detail, board_origin = await asyncio.wait_for(workday_task, timeout=max(remaining, 0.1))
             index.workday = urls
             index.workday_detail = detail
+            index.workday_board_origin = board_origin
         except TimeoutError:
             workday_task.cancel()
             index.workday = []
@@ -210,6 +217,7 @@ async def collect_global_boards(
             index=index,
             limit=settings.max_boards_per_run,
             now=now,
+            board_origin=index.workday_board_origin,
         )
         collected.extend(posts)
         profile["workday"] = workday_tally
@@ -265,6 +273,14 @@ async def load_public_board_index(
     index.greenhouse = _unique(greenhouse_tokens)
     index.ashby = _unique(ashby_tokens)
     index.urls_seen = urls
+    log.info(
+        "cdx_board_index_sample_complete",
+        service="internet_archive_cdx",
+        queries=len(queries),
+        urls_seen=urls,
+        greenhouse_found=len(index.greenhouse),
+        ashby_found=len(index.ashby),
+    )
     if not any(bodies):
         index.status = "unavailable"
         index.detail = "Internet Archive CDX returned no rows; configured companies still run"
@@ -461,8 +477,38 @@ async def _cdx_body(ctx: SourceContext, url: str) -> str:
             ctx.http.request("GET", url, headers={"Accept": "application/json"}),
             timeout=12,
         )
-    except Exception:
+    except asyncio.TimeoutError:
+        log.warning("cdx_timeout", service="internet_archive_cdx", timeout_seconds=12)
         return ""
-    if getattr(result, "blocked_by_robots", False) or not result.ok:
+    except OSError as exc:
+        log.warning(
+            "cdx_connection_error",
+            service="internet_archive_cdx",
+            error=type(exc).__name__,
+        )
         return ""
-    return result.text or ""
+    except Exception as exc:
+        log.warning(
+            "cdx_request_error",
+            service="internet_archive_cdx",
+            error=type(exc).__name__,
+        )
+        return ""
+    if getattr(result, "blocked_by_robots", False):
+        log.warning("cdx_blocked_by_robots", service="internet_archive_cdx")
+        return ""
+    if not result.ok:
+        log.warning(
+            "cdx_http_error",
+            service="internet_archive_cdx",
+            http_status=result.status,
+        )
+        return ""
+    body = result.text or ""
+    log.debug(
+        "cdx_response_ok",
+        service="internet_archive_cdx",
+        http_status=result.status,
+        response_bytes=len(body),
+    )
+    return body

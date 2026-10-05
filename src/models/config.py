@@ -166,6 +166,12 @@ class GlobalBoardSettings(_Base):
     prefixes_per_run: int = Field(default=4, ge=1, le=8)
     index_timeout_seconds: float = Field(default=40.0, gt=0, le=90)
     board_timeout_seconds: float = Field(default=45.0, gt=0, le=120)
+    workday_snapshot_fallback_enabled: bool = True
+    workday_snapshot_window_days: int = Field(default=30, ge=7, le=90)
+    workday_snapshot_max_queries: int = Field(default=4, ge=1, le=8)
+    workday_snapshot_timeout_seconds: float = Field(default=15.0, gt=0, le=30)
+    workday_snapshot_max_candidates: int = Field(default=40, ge=1, le=200)
+    workday_snapshot_concurrency: int = Field(default=2, ge=1, le=4)
 
 
 class DiscoverySettings(_Base):
@@ -544,6 +550,7 @@ class CompanyConfig(BaseModel):
     aliases: tuple[str, ...] = ()
     fortune_500: bool = False
     careers_url: str | None = None
+    board_url: str | None = None
     ats_type: AtsType | None = None
     ats_identifier: str | None = None
     ats: AtsBlock | None = None
@@ -559,7 +566,7 @@ class CompanyConfig(BaseModel):
             return None
         return str(value).strip().lower()
 
-    @field_validator("ats_identifier", "careers_url", mode="before")
+    @field_validator("ats_identifier", "careers_url", "board_url", mode="before")
     @classmethod
     def _blank_to_none(cls, value: Any) -> Any:
         if isinstance(value, str) and not value.strip():
