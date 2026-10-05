@@ -51,7 +51,15 @@ jobs:
           LOG_FORMAT: json
         run: |
           . .venv/bin/activate
-          python -m src.main
+          python -m src.main 2>&1 | tee pipeline.log
+
+      - name: Upload pipeline log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pipeline-log-${{ github.run_id }}
+          path: pipeline.log
+          retention-days: 7
 
       - name: Commit generated tracker
         run: |
