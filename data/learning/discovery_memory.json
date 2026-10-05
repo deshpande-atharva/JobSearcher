@@ -2,7 +2,7 @@
   "board_searches": {
     "workday:backend_engineer:api": {
       "board": "workday",
-      "consecutive_zero_new": 2,
+      "consecutive_zero_new": 3,
       "key": "workday:backend_engineer:api",
       "method": "api",
       "new_qualified_jobs": 0,
@@ -17,22 +17,55 @@
         {
           "new": 0,
           "qualified": 0
+        },
+        {
+          "new": 0,
+          "qualified": 0
         }
       ],
       "recent_novelty_rate": 0.0,
       "repeat_qualified_jobs": 0,
-      "revisit_due": false,
-      "runs_seen": 2,
+      "revisit_due": true,
+      "runs_seen": 3,
       "strategy_id": "backend_engineer"
     },
     "workday:backend_engineer:playwright": {
       "board": "workday",
-      "consecutive_zero_new": 2,
+      "consecutive_zero_new": 3,
       "key": "workday:backend_engineer:playwright",
       "method": "playwright",
       "new_qualified_jobs": 0,
       "qualified_jobs": 0,
       "query": "backend engineer",
+      "raw_jobs": 0,
+      "recent": [
+        {
+          "new": 0,
+          "qualified": 0
+        },
+        {
+          "new": 0,
+          "qualified": 0
+        },
+        {
+          "new": 0,
+          "qualified": 0
+        }
+      ],
+      "recent_novelty_rate": 0.0,
+      "repeat_qualified_jobs": 0,
+      "revisit_due": true,
+      "runs_seen": 3,
+      "strategy_id": "backend_engineer"
+    },
+    "workday:platform_engineer:api": {
+      "board": "workday",
+      "consecutive_zero_new": 2,
+      "key": "workday:platform_engineer:api",
+      "method": "api",
+      "new_qualified_jobs": 0,
+      "qualified_jobs": 0,
+      "query": "platform engineer",
       "raw_jobs": 0,
       "recent": [
         {
@@ -48,13 +81,13 @@
       "repeat_qualified_jobs": 0,
       "revisit_due": false,
       "runs_seen": 2,
-      "strategy_id": "backend_engineer"
+      "strategy_id": "platform_engineer"
     },
-    "workday:platform_engineer:api": {
+    "workday:platform_engineer:playwright": {
       "board": "workday",
       "consecutive_zero_new": 1,
-      "key": "workday:platform_engineer:api",
-      "method": "api",
+      "key": "workday:platform_engineer:playwright",
+      "method": "playwright",
       "new_qualified_jobs": 0,
       "qualified_jobs": 0,
       "query": "platform engineer",
@@ -144,7 +177,7 @@
   },
   "companies": {
     "affirm": {
-      "consecutive_zero_new": 1,
+      "consecutive_zero_new": 2,
       "cooldown_remaining": 0,
       "display": "Affirm",
       "effort": "full",
@@ -154,13 +187,9 @@
         "8011590003"
       ],
       "last_new_job": "2026-10-03",
-      "last_seen": "2026-10-04",
+      "last_seen": "2026-10-05",
       "new_jobs": 2,
       "recent": [
-        {
-          "new": 0,
-          "qualified": 1
-        },
         {
           "new": 2,
           "qualified": 3
@@ -168,12 +197,16 @@
         {
           "new": 0,
           "qualified": 3
+        },
+        {
+          "new": 0,
+          "qualified": 3
         }
       ],
-      "recent_novelty_rate": 0.2857,
-      "repeat_jobs": 6,
+      "recent_novelty_rate": 0.2222,
+      "repeat_jobs": 9,
       "revisit_due": false,
-      "runs_seen": 4,
+      "runs_seen": 5,
       "sources": [
         "greenhouse"
       ],
@@ -236,16 +269,16 @@
       "unique_jobs": 1
     },
     "booz allen hamilton": {
-      "consecutive_zero_new": 4,
-      "cooldown_remaining": 1,
+      "consecutive_zero_new": 5,
+      "cooldown_remaining": 0,
       "display": "Booz Allen Hamilton",
-      "effort": "monitor",
+      "effort": "full",
       "known_job_ids": [
         "r0250290",
         "r0250655"
       ],
       "last_new_job": null,
-      "last_seen": "2026-10-04",
+      "last_seen": "2026-10-05",
       "new_jobs": 0,
       "recent": [
         {
@@ -262,16 +295,16 @@
         }
       ],
       "recent_novelty_rate": 0.0,
-      "repeat_jobs": 8,
-      "revisit_due": false,
-      "runs_seen": 4,
+      "repeat_jobs": 10,
+      "revisit_due": true,
+      "runs_seen": 5,
       "sources": [
         "workday"
       ],
       "unique_jobs": 2
     },
     "chime": {
-      "consecutive_zero_new": 1,
+      "consecutive_zero_new": 2,
       "cooldown_remaining": 0,
       "display": "Chime",
       "effort": "full",
@@ -279,7 +312,7 @@
         "8859182002"
       ],
       "last_new_job": "2026-10-03",
-      "last_seen": "2026-10-04",
+      "last_seen": "2026-10-05",
       "new_jobs": 1,
       "recent": [
         {
@@ -289,12 +322,16 @@
         {
           "new": 0,
           "qualified": 1
+        },
+        {
+          "new": 0,
+          "qualified": 1
         }
       ],
-      "recent_novelty_rate": 0.5,
-      "repeat_jobs": 1,
+      "recent_novelty_rate": 0.3333,
+      "repeat_jobs": 2,
       "revisit_due": false,
-      "runs_seen": 2,
+      "runs_seen": 3,
       "sources": [
         "greenhouse"
       ],
@@ -323,6 +360,32 @@
       "runs_seen": 1,
       "sources": [
         "ashby"
+      ],
+      "unique_jobs": 1
+    },
+    "khan academy": {
+      "consecutive_zero_new": 0,
+      "cooldown_remaining": 0,
+      "display": "Khan Academy",
+      "effort": "full",
+      "known_job_ids": [
+        "8250259"
+      ],
+      "last_new_job": "2026-10-05",
+      "last_seen": "2026-10-05",
+      "new_jobs": 1,
+      "recent": [
+        {
+          "new": 1,
+          "qualified": 1
+        }
+      ],
+      "recent_novelty_rate": 1.0,
+      "repeat_jobs": 0,
+      "revisit_due": false,
+      "runs_seen": 1,
+      "sources": [
+        "greenhouse"
       ],
       "unique_jobs": 1
     },
@@ -357,15 +420,15 @@
       "unique_jobs": 1
     },
     "notion": {
-      "consecutive_zero_new": 4,
-      "cooldown_remaining": 1,
+      "consecutive_zero_new": 5,
+      "cooldown_remaining": 0,
       "display": "Notion",
-      "effort": "monitor",
+      "effort": "full",
       "known_job_ids": [
         "2b587e66-deac-421a-a824-9415ba78b5a7"
       ],
       "last_new_job": null,
-      "last_seen": "2026-10-04",
+      "last_seen": "2026-10-05",
       "new_jobs": 0,
       "recent": [
         {
@@ -382,24 +445,24 @@
         }
       ],
       "recent_novelty_rate": 0.0,
-      "repeat_jobs": 4,
-      "revisit_due": false,
-      "runs_seen": 4,
+      "repeat_jobs": 5,
+      "revisit_due": true,
+      "runs_seen": 5,
       "sources": [
         "ashby"
       ],
       "unique_jobs": 1
     },
     "nuro": {
-      "consecutive_zero_new": 4,
-      "cooldown_remaining": 1,
+      "consecutive_zero_new": 5,
+      "cooldown_remaining": 0,
       "display": "Nuro",
-      "effort": "monitor",
+      "effort": "full",
       "known_job_ids": [
         "8180955"
       ],
       "last_new_job": null,
-      "last_seen": "2026-10-04",
+      "last_seen": "2026-10-05",
       "new_jobs": 0,
       "recent": [
         {
@@ -416,28 +479,28 @@
         }
       ],
       "recent_novelty_rate": 0.0,
-      "repeat_jobs": 4,
-      "revisit_due": false,
-      "runs_seen": 4,
+      "repeat_jobs": 5,
+      "revisit_due": true,
+      "runs_seen": 5,
       "sources": [
         "greenhouse"
       ],
       "unique_jobs": 1
     },
     "nvidia": {
-      "consecutive_zero_new": 2,
-      "cooldown_remaining": 0,
+      "consecutive_zero_new": 3,
+      "cooldown_remaining": 2,
       "display": "NVIDIA",
-      "effort": "full",
+      "effort": "monitor",
       "known_job_ids": [
         "jr2017083"
       ],
       "last_new_job": "2026-10-02",
-      "last_seen": "2026-10-04",
+      "last_seen": "2026-10-05",
       "new_jobs": 1,
       "recent": [
         {
-          "new": 1,
+          "new": 0,
           "qualified": 1
         },
         {
@@ -449,25 +512,25 @@
           "qualified": 1
         }
       ],
-      "recent_novelty_rate": 0.3333,
-      "repeat_jobs": 2,
+      "recent_novelty_rate": 0.0,
+      "repeat_jobs": 3,
       "revisit_due": false,
-      "runs_seen": 3,
+      "runs_seen": 4,
       "sources": [
         "workday"
       ],
       "unique_jobs": 1
     },
     "scale ai": {
-      "consecutive_zero_new": 4,
-      "cooldown_remaining": 1,
+      "consecutive_zero_new": 5,
+      "cooldown_remaining": 0,
       "display": "Scale AI",
-      "effort": "monitor",
+      "effort": "full",
       "known_job_ids": [
         "4736426005"
       ],
       "last_new_job": null,
-      "last_seen": "2026-10-04",
+      "last_seen": "2026-10-05",
       "new_jobs": 0,
       "recent": [
         {
@@ -484,9 +547,9 @@
         }
       ],
       "recent_novelty_rate": 0.0,
-      "repeat_jobs": 4,
-      "revisit_due": false,
-      "runs_seen": 4,
+      "repeat_jobs": 5,
+      "revisit_due": true,
+      "runs_seen": 5,
       "sources": [
         "greenhouse"
       ],
@@ -529,6 +592,15 @@
       "qualified": 10,
       "repeat_jobs": 10,
       "run_id": "2026-10-04T16:09:01Z"
+    },
+    {
+      "new_jobs": 1,
+      "novelty_change": 0.0909,
+      "novelty_rate": 0.0909,
+      "previous_novelty_rate": 0.0,
+      "qualified": 11,
+      "repeat_jobs": 10,
+      "run_id": "2026-10-05T19:09:56Z"
     }
   ],
   "sources": {
@@ -538,9 +610,104 @@
         "notion"
       ],
       "discovered": 0,
-      "last_success": "2026-10-04",
+      "last_success": "2026-10-05",
       "new_companies": 1,
       "new_jobs": 1,
+      "qualified": 6,
+      "recent": [
+        {
+          "new": 0,
+          "qualified": 1
+        },
+        {
+          "new": 0,
+          "qualified": 1
+        },
+        {
+          "new": 0,
+          "qualified": 1
+        }
+      ],
+      "recent_novelty_rate": 0.0,
+      "repeat_jobs": 5,
+      "runs": 5,
+      "unique_companies": 2
+    },
+    "greenhouse": {
+      "company_keys": [
+        "affirm",
+        "airbnb",
+        "asana",
+        "chime",
+        "khan academy",
+        "lyft",
+        "nuro",
+        "scale ai"
+      ],
+      "discovered": 0,
+      "last_success": "2026-10-05",
+      "new_companies": 2,
+      "new_jobs": 4,
+      "qualified": 30,
+      "recent": [
+        {
+          "new": 3,
+          "qualified": 6
+        },
+        {
+          "new": 0,
+          "qualified": 6
+        },
+        {
+          "new": 1,
+          "qualified": 7
+        }
+      ],
+      "recent_novelty_rate": 0.2105,
+      "repeat_jobs": 26,
+      "runs": 5,
+      "unique_companies": 8
+    },
+    "workday": {
+      "company_keys": [
+        "booz allen hamilton",
+        "nvidia"
+      ],
+      "discovered": 0,
+      "last_success": "2026-10-05",
+      "new_companies": 1,
+      "new_jobs": 1,
+      "qualified": 14,
+      "recent": [
+        {
+          "new": 0,
+          "qualified": 3
+        },
+        {
+          "new": 0,
+          "qualified": 3
+        },
+        {
+          "new": 0,
+          "qualified": 3
+        }
+      ],
+      "recent_novelty_rate": 0.0,
+      "repeat_jobs": 13,
+      "runs": 5,
+      "unique_companies": 2
+    }
+  },
+  "strategies": {
+    "ashby_configured": {
+      "companies": 1,
+      "company_keys": [
+        "notion"
+      ],
+      "discovered": 0,
+      "last_used": "2026-10-05",
+      "new_companies": 0,
+      "new_jobs": 0,
       "qualified": 5,
       "recent": [
         {
@@ -557,102 +724,8 @@
         }
       ],
       "recent_novelty_rate": 0.0,
-      "repeat_jobs": 4,
-      "runs": 4,
-      "unique_companies": 2
-    },
-    "greenhouse": {
-      "company_keys": [
-        "affirm",
-        "airbnb",
-        "asana",
-        "chime",
-        "lyft",
-        "nuro",
-        "scale ai"
-      ],
-      "discovered": 0,
-      "last_success": "2026-10-04",
-      "new_companies": 1,
-      "new_jobs": 3,
-      "qualified": 23,
-      "recent": [
-        {
-          "new": 0,
-          "qualified": 5
-        },
-        {
-          "new": 3,
-          "qualified": 6
-        },
-        {
-          "new": 0,
-          "qualified": 6
-        }
-      ],
-      "recent_novelty_rate": 0.1765,
-      "repeat_jobs": 20,
-      "runs": 4,
-      "unique_companies": 7
-    },
-    "workday": {
-      "company_keys": [
-        "booz allen hamilton",
-        "nvidia"
-      ],
-      "discovered": 0,
-      "last_success": "2026-10-04",
-      "new_companies": 1,
-      "new_jobs": 1,
-      "qualified": 11,
-      "recent": [
-        {
-          "new": 1,
-          "qualified": 3
-        },
-        {
-          "new": 0,
-          "qualified": 3
-        },
-        {
-          "new": 0,
-          "qualified": 3
-        }
-      ],
-      "recent_novelty_rate": 0.1111,
-      "repeat_jobs": 10,
-      "runs": 4,
-      "unique_companies": 2
-    }
-  },
-  "strategies": {
-    "ashby_configured": {
-      "companies": 1,
-      "company_keys": [
-        "notion"
-      ],
-      "discovered": 0,
-      "last_used": "2026-10-04",
-      "new_companies": 0,
-      "new_jobs": 0,
-      "qualified": 4,
-      "recent": [
-        {
-          "new": 0,
-          "qualified": 1
-        },
-        {
-          "new": 0,
-          "qualified": 1
-        },
-        {
-          "new": 0,
-          "qualified": 1
-        }
-      ],
-      "recent_novelty_rate": 0.0,
-      "repeat_jobs": 4,
-      "runs": 4,
+      "repeat_jobs": 5,
+      "runs": 5,
       "source": "ashby"
     },
     "ashby_global_index": {
@@ -677,26 +750,23 @@
       "source": "ashby"
     },
     "greenhouse_configured": {
-      "companies": 7,
+      "companies": 8,
       "company_keys": [
         "affirm",
         "airbnb",
         "asana",
         "chime",
+        "khan academy",
         "lyft",
         "nuro",
         "scale ai"
       ],
       "discovered": 0,
-      "last_used": "2026-10-04",
-      "new_companies": 1,
-      "new_jobs": 3,
-      "qualified": 23,
+      "last_used": "2026-10-05",
+      "new_companies": 2,
+      "new_jobs": 4,
+      "qualified": 30,
       "recent": [
-        {
-          "new": 0,
-          "qualified": 5
-        },
         {
           "new": 3,
           "qualified": 6
@@ -704,11 +774,15 @@
         {
           "new": 0,
           "qualified": 6
+        },
+        {
+          "new": 1,
+          "qualified": 7
         }
       ],
-      "recent_novelty_rate": 0.1765,
-      "repeat_jobs": 20,
-      "runs": 4,
+      "recent_novelty_rate": 0.2105,
+      "repeat_jobs": 26,
+      "runs": 5,
       "source": "greenhouse"
     },
     "workday_configured": {
@@ -718,13 +792,13 @@
         "nvidia"
       ],
       "discovered": 0,
-      "last_used": "2026-10-04",
+      "last_used": "2026-10-05",
       "new_companies": 1,
       "new_jobs": 1,
-      "qualified": 11,
+      "qualified": 14,
       "recent": [
         {
-          "new": 1,
+          "new": 0,
           "qualified": 3
         },
         {
@@ -736,12 +810,12 @@
           "qualified": 3
         }
       ],
-      "recent_novelty_rate": 0.1111,
-      "repeat_jobs": 10,
-      "runs": 4,
+      "recent_novelty_rate": 0.0,
+      "repeat_jobs": 13,
+      "runs": 5,
       "source": "workday"
     }
   },
-  "updated_at": "2026-10-04T16:14:13Z",
+  "updated_at": "2026-10-05T19:15:30Z",
   "version": 1
 }
