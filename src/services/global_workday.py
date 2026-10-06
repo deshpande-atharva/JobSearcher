@@ -225,6 +225,16 @@ async def collect_global_workday(
     tally["duplicate_boards_skipped"] = int(tally["duplicate_boards"]) + int(
         tally["configured_overlap"]
     )
+    log.info(
+        "global_workday_tally",
+        discovered=tally["discovered_boards"],
+        invalid=tally["invalid_boards"],
+        duplicate=tally["duplicate_boards"],
+        configured_overlap=tally["configured_overlap"],
+        fresh_before_select=len(fresh),
+        selected=len(chosen),
+        board_origin=board_origin,
+    )
     if not chosen:
         return [], tally
 
