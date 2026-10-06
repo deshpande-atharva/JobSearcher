@@ -212,9 +212,15 @@ def apply_board_search_outcomes(
         key = search_key(board, strategy, method)
         grouped.setdefault(key, []).append(job)
         meta[key] = {"board": board, "strategy_id": strategy, "method": method, "query": str(provenance.get("query") or "")}
+    attempt_by_key: dict[str, dict] = {}
     for attempt in attempts or []:
         key = str(attempt.get("key") or "")
         if key and key not in grouped:
+            # Skipped searches (playwright disabled, budget exhausted, no URL) and
+            # failed searches (browser crash, timeout) are NOT learning observations.
+            # Only executed searches - including zero-result ones - update the record.
+            if attempt.get("skipped") or "error" in attempt:
+                continue
             grouped[key] = []
             meta.setdefault(
                 key,
@@ -225,15 +231,21 @@ def apply_board_search_outcomes(
                     "query": str(attempt.get("query") or ""),
                 },
             )
+        # Index non-skipped, non-errored attempts for outcome writeback below.
+        if key and not attempt.get("skipped") and "error" not in attempt:
+            attempt_by_key[key] = attempt
     searches = memory.setdefault("board_searches", {})
     for key, bucket in grouped.items():
         record = dict(searches.get(key) or _blank_search(key, meta.get(key) or {}))
         new_count = 0
         qualified = 0
+        exact_count = 0
         for job in bucket:
             provenance = getattr(job, "provenance", None) or {}
             exact = provenance.get("exact_url", True) is not False
             qualified += 1
+            if exact:
+                exact_count += 1
             if bool(getattr(job, "is_new", False)) and exact:
                 new_count += 1
         repeat = qualified - new_count
@@ -257,6 +269,15 @@ def apply_board_search_outcomes(
         fresh = sum(int(item.get("new") or 0) for item in record["recent"])
         record["recent_novelty_rate"] = round(fresh / total, 4) if total else 0.0
         searches[key] = record
+        # Write per-run outcome counts back to the attempt dict so callers can
+        # log and report them without a second pass through memory.
+        att = attempt_by_key.get(key)
+        if att is not None:
+            att["qualified_jobs"] = qualified
+            att["new_qualified_jobs"] = new_count
+            att["repeat_qualified_jobs"] = repeat
+            att["exact_official_url_count"] = exact_count
+            att["url_failure_count"] = qualified - exact_count
 
 
 def observe_capabilities(page: PageState) -> dict[str, str]:
@@ -394,6 +415,7 @@ def _postings_from_page(
                 job_id=card.job_id or None,
                 apply_url=url,
                 provenance={
+                    "board_origin": "global_index",
                     "discovery_mode": "global_board",
                     "board": board,
                     "method": "playwright",

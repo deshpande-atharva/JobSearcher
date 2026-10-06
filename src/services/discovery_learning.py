@@ -425,6 +425,7 @@ def persist_learning(state: Any) -> None:
         attempts=attempts,
     )
     save_memory(path, memory)
+    _log_board_search_attempts(attempts)
     plan = build_discovery_plan(memory, settings, state.config.settings.board_search)
     state.resources["discovery_plan"] = plan
     state.resources["discovery_memory_loaded"] = LoadedMemory(memory, True, path)
@@ -504,6 +505,50 @@ def _attach_board_searches(
     )
 
 
+def _log_board_search_attempts(attempts: list[dict]) -> None:
+    """Emit one structured log line per executed board search slot (after learning update)."""
+    playwright_raw = 0
+    playwright_qualified = 0
+    playwright_new = 0
+    any_playwright = False
+    for attempt in attempts:
+        if attempt.get("skipped") or "error" in attempt:
+            continue
+        method = str(attempt.get("method") or "")
+        log.info(
+            "board_search_slot",
+            key=attempt.get("key"),
+            board=attempt.get("board"),
+            strategy_id=attempt.get("strategy_id"),
+            method=method,
+            query=attempt.get("query"),
+            target_url=attempt.get("target_url"),
+            search_success=attempt.get("search_success"),
+            raw_jobs=attempt.get("raw_jobs"),
+            qualified_jobs=attempt.get("qualified_jobs"),
+            new_qualified_jobs=attempt.get("new_qualified_jobs"),
+            repeat_qualified_jobs=attempt.get("repeat_qualified_jobs"),
+            exact_official_url_count=attempt.get("exact_official_url_count"),
+            url_failure_count=attempt.get("url_failure_count"),
+            duration_seconds=attempt.get("duration_seconds"),
+            applied_filters=attempt.get("applied_filters"),
+            requested_filters=attempt.get("requested_filters"),
+        )
+        if method == "playwright":
+            any_playwright = True
+            playwright_raw += int(attempt.get("raw_jobs") or 0)
+            playwright_qualified += int(attempt.get("qualified_jobs") or 0)
+            playwright_new += int(attempt.get("new_qualified_jobs") or 0)
+    if any_playwright:
+        log.info(
+            "board_search_playwright_pipeline",
+            raw=playwright_raw,
+            qualified=playwright_qualified,
+            new=playwright_new,
+            repeat=playwright_qualified - playwright_new,
+        )
+
+
 def _board_search_summary(memory: dict[str, Any], plan: DiscoveryPlan) -> list[str]:
     records = memory.get("board_searches") or {}
     if not records and not plan.board_searches:
@@ -524,6 +569,19 @@ def _board_search_summary(memory: dict[str, Any], plan: DiscoveryPlan) -> list[s
         f"API qualified={totals['api']['qualified']} new={totals['api']['new']}",
         f"PLAYWRIGHT qualified={totals['playwright']['qualified']} new={totals['playwright']['new']}",
     ]
+    for key, record in sorted(records.items()):
+        if not isinstance(record, dict):
+            continue
+        recent = record.get("recent") or []
+        last = recent[-1] if recent else {}
+        q = int(last.get("qualified") or 0)
+        n = int(last.get("new") or 0)
+        lines.append(
+            f"slot {key}: qualified={q} new={n} "
+            f"runs={int(record.get('runs_seen') or 0)} "
+            f"novelty={_percent(record.get('recent_novelty_rate'))} "
+            f"revisit={str(bool(record.get('revisit_due'))).lower()}"
+        )
     shown = plan.board_searches[:4]
     if shown:
         lines.append("Next searches:")

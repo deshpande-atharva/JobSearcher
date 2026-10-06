@@ -745,4 +745,22 @@ def render_pipeline_health(state: PipelineState) -> str:
         lines.append(f"coverage_cap: max_jobs_per_run truncated={summary.jobs_truncated}")
     if summary.learning_report:
         lines.append(summary.learning_report)
+    for attempt in list(state.resources.get("board_search_attempts") or []):
+        if attempt.get("skipped") or "error" in attempt:
+            continue
+        lines.append(
+            "board_search_slot: "
+            f"key={attempt.get('key')} "
+            f"board={attempt.get('board')} "
+            f"strategy_id={attempt.get('strategy_id')} "
+            f"method={attempt.get('method')} "
+            f"raw_jobs={attempt.get('raw_jobs', 0)} "
+            f"qualified={attempt.get('qualified_jobs', 0)} "
+            f"new={attempt.get('new_qualified_jobs', 0)} "
+            f"repeat={attempt.get('repeat_qualified_jobs', 0)} "
+            f"exact_urls={attempt.get('exact_official_url_count', 0)} "
+            f"url_failures={attempt.get('url_failure_count', 0)} "
+            f"duration_seconds={attempt.get('duration_seconds')} "
+            f"search_success={str(attempt.get('search_success', '')).lower()}"
+        )
     return "\n".join(lines)

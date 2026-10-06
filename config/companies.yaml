@@ -339,6 +339,7 @@ companies:
     aliases: ["Adobe Inc", "Adobe Systems"]
     fortune_500: true
     careers_url: "https://careers.adobe.com/us/en/search-results"
+    board_url: "https://adobe.wd5.myworkdayjobs.com/en-US/external_experienced"
     discovery_urls:
       - "https://adobe.wd5.myworkdayjobs.com/en-US/external_experienced"
     ats:
@@ -372,6 +373,7 @@ companies:
     aliases: ["NVIDIA Corporation"]
     fortune_500: true
     careers_url: "https://www.nvidia.com/en-us/about-nvidia/careers/"
+    board_url: "https://nvidia.wd5.myworkdayjobs.com/en-US/NVIDIAExternalCareerSite"
     discovery_urls:
       - "https://nvidia.wd5.myworkdayjobs.com/en-US/NVIDIAExternalCareerSite"
     ats:
