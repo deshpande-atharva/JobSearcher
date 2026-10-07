@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -402,3 +403,70 @@ def test_llm_enabled_anthropic_no_key():
         "LLM_PROVIDER": "anthropic",
     })
     assert config.llm_enabled is False
+
+
+# ---------------------------------------------------------------------------
+# 14. Literal normalization for Claude responses
+# ---------------------------------------------------------------------------
+
+
+def test_normalize_literals_fixes_case():
+    from src.llm.base import _normalize_literals
+    from src.llm.schemas import RoleClassificationResult
+
+    payload = {
+        "is_software_engineering": True,
+        "role_family": "Backend_Engineer",
+        "confidence": 0.9,
+        "reasoning": "test",
+    }
+    fixed = _normalize_literals(payload, RoleClassificationResult)
+    assert fixed["role_family"] == "BACKEND_ENGINEER"
+
+
+def test_normalize_literals_preserves_correct_values():
+    from src.llm.base import _normalize_literals
+    from src.llm.schemas import RoleClassificationResult
+
+    payload = {
+        "is_software_engineering": True,
+        "role_family": "SOFTWARE_ENGINEER",
+        "confidence": 0.9,
+        "reasoning": "test",
+    }
+    fixed = _normalize_literals(payload, RoleClassificationResult)
+    assert fixed["role_family"] == "SOFTWARE_ENGINEER"
+
+
+def test_normalize_literals_handles_spaces():
+    from src.llm.base import _normalize_literals
+    from src.llm.schemas import SponsorshipLanguageResult
+
+    payload = {"polarity": "positive", "confidence": 0.8, "quote": "", "reasoning": ""}
+    fixed = _normalize_literals(payload, SponsorshipLanguageResult)
+    assert fixed["polarity"] == "POSITIVE"
+
+
+async def test_claude_response_with_lowercase_literals():
+    """Claude may return lowercase enum values. Normalization should fix them."""
+    with patch.dict("sys.modules", {"anthropic": _mock_anthropic_module()}):
+        from src.llm.anthropic import AnthropicProvider
+        from src.llm.schemas import RoleClassificationResult
+
+        provider = AnthropicProvider(_settings(), api_key="sk-ant-test")
+        provider._client.messages.create = AsyncMock(
+            return_value=_mock_response(json.dumps({
+                "is_software_engineering": True,
+                "role_family": "backend_engineer",
+                "confidence": 0.95,
+                "reasoning": "The posting describes backend development work.",
+            }))
+        )
+        result = await provider.structured(
+            prompt="test",
+            response_model=RoleClassificationResult,
+            purpose="role",
+        )
+        assert result is not None
+        assert result.role_family == "BACKEND_ENGINEER"
+        assert result.is_software_engineering is True

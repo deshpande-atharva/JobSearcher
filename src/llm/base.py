@@ -20,7 +20,7 @@ import json
 import re
 import time
 from abc import ABC, abstractmethod
-from typing import Any, TypeVar
+from typing import Any, Literal, TypeVar
 
 from pydantic import BaseModel, Field, ValidationError
 
@@ -122,6 +122,43 @@ def _extract_json_object(text: str) -> str:
     if start != -1 and end > start:
         return cleaned[start : end + 1]
     return cleaned
+
+
+def _normalize_literals(payload: dict[str, Any], model: type[BaseModel]) -> dict[str, Any]:
+    """Coerce string values so they match Literal field definitions.
+
+    LLM providers sometimes return ``"Software_Engineer"`` or
+    ``"software_engineer"`` instead of the exact ``"SOFTWARE_ENGINEER"``
+    required by the Pydantic schema.  This normalises case-insensitively
+    so a near-miss doesn't cause a schema rejection.
+    """
+    literal_fields: dict[str, tuple[str, ...]] = {}
+    for name, field_info in model.model_fields.items():
+        annotation = field_info.annotation
+        # Unwrap Optional[Literal[...]]
+        origin = getattr(annotation, "__origin__", None)
+        args = getattr(annotation, "__args__", None)
+        if origin is Literal:
+            literal_fields[name] = tuple(str(a) for a in (args or ()))
+        elif args:
+            for arg in args:
+                if getattr(arg, "__origin__", None) is Literal:
+                    literal_fields[name] = tuple(str(a) for a in getattr(arg, "__args__", ()))
+    if not literal_fields:
+        return payload
+    normalised = dict(payload)
+    for field_name, allowed in literal_fields.items():
+        value = normalised.get(field_name)
+        if not isinstance(value, str):
+            continue
+        if value in allowed:
+            continue
+        upper = value.upper().replace(" ", "_").replace("-", "_")
+        for candidate in allowed:
+            if upper == candidate:
+                normalised[field_name] = candidate
+                break
+    return normalised
 
 
 _RETRYABLE = frozenset({"429", "503", "timeout", "connection"})
@@ -360,10 +397,16 @@ class LLMProvider(ABC):
             return None
         if not isinstance(payload, dict):
             return None
+        payload = _normalize_literals(payload, response_model)
         try:
             return response_model.model_validate(payload)
         except ValidationError as exc:
-            log.debug("llm payload failed validation", provider=self.name, error=str(exc)[:400])
+            log.warning(
+                "llm payload failed validation",
+                provider=self.name,
+                error=str(exc)[:400],
+                raw_keys=list(payload.keys())[:10],
+            )
             return None
 
 
