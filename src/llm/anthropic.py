@@ -29,7 +29,12 @@ class AnthropicProvider(LLMProvider):
 
     name = "anthropic"
 
-    def __init__(self, settings: LLMSettings, api_key: str) -> None:
+    def __init__(
+        self,
+        settings: LLMSettings,
+        api_key: str,
+        workspace_id: str | None = None,
+    ) -> None:
         super().__init__(settings)
         if not api_key:
             raise ValueError("an Anthropic API key is required")
@@ -42,9 +47,21 @@ class AnthropicProvider(LLMProvider):
                 'install it with `pip install anthropic`'
             ) from exc
 
-        self._client = anthropic.AsyncAnthropic(api_key=api_key)
+        # Workspace-scoped keys work without extra headers.  Non-scoped keys
+        # require the anthropic-workspace-id default header.
+        default_headers: dict[str, str] = {}
+        if workspace_id:
+            default_headers["anthropic-workspace-id"] = workspace_id
+        self._client = anthropic.AsyncAnthropic(
+            api_key=api_key,
+            default_headers=default_headers or None,
+        )
         self._model = settings.model
-        log.info("anthropic provider ready", model=self._model)
+        log.info(
+            "anthropic provider ready",
+            model=self._model,
+            workspace_id_set=bool(workspace_id),
+        )
 
     @property
     def available(self) -> bool:

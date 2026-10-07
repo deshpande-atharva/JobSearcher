@@ -675,6 +675,7 @@ class Secrets(BaseModel):
     llm_provider: str | None = None
     anthropic_api_key: str | None = None
     anthropic_model: str | None = None
+    anthropic_workspace_id: str | None = None
     gemini_api_key: str | None = None
     gemini_model: str | None = None
     smtp_host: str | None = None
@@ -705,6 +706,7 @@ class Secrets(BaseModel):
             llm_provider=get("LLM_PROVIDER"),
             anthropic_api_key=get("ANTHROPIC_API_KEY"),
             anthropic_model=get("ANTHROPIC_MODEL"),
+            anthropic_workspace_id=get("ANTHROPIC_WORKSPACE_ID"),
             gemini_api_key=get("GEMINI_API_KEY"),
             gemini_model=get("GEMINI_MODEL"),
             smtp_host=get("SMTP_HOST"),

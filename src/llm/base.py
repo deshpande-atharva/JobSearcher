@@ -422,6 +422,7 @@ def build_llm_provider(config: AppConfig) -> LLMProvider:
             return AnthropicProvider(
                 settings=settings.model_copy(update={"model": model}),
                 api_key=config.secrets.anthropic_api_key,
+                workspace_id=config.secrets.anthropic_workspace_id,
             )
         except Exception as exc:
             log.warning("failed to initialise Anthropic provider; falling back to deterministic logic", error=str(exc))
