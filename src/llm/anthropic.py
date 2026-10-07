@@ -79,9 +79,12 @@ class AnthropicProvider(LLMProvider):
         kwargs: dict[str, Any] = {
             "model": self._model,
             "max_tokens": self.settings.max_output_tokens,
-            "temperature": self.settings.temperature,
             "messages": messages,
         }
+        # Some Claude models (e.g. claude-sonnet-5) reject the temperature
+        # parameter entirely.  Only send it when explicitly non-zero.
+        if self.settings.temperature > 0:
+            kwargs["temperature"] = self.settings.temperature
         if system:
             # Instruct Claude to respond with valid JSON matching the schema.
             schema_text = json.dumps(schema, indent=2)
