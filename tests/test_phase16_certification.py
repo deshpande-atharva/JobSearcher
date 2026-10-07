@@ -47,6 +47,8 @@ def test_workflow_is_production_only_and_least_privilege() -> None:
     assert "resume.pdf" not in workflow
     assert "data/candidate" not in workflow
     assert "git add data/current data/archive" in workflow
+    assert "ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}" in workflow
+    assert "ANTHROPIC_API_KEY=" not in workflow
     assert "GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}" in workflow
     assert "GEMINI_API_KEY=" not in workflow
 
@@ -92,6 +94,7 @@ def test_production_configuration_is_safe_and_deterministic() -> None:
         assert "/Users/" not in text
         assert path.read_bytes() == before[path.name]
     example = (ROOT / ".env.example").read_text(encoding="utf-8")
+    assert "ANTHROPIC_API_KEY=\n" in example
     assert "GEMINI_API_KEY=\n" in example
     assert "SMTP_PASSWORD=\n" in example
     parsed = yaml.safe_load(settings_path.read_text(encoding="utf-8"))

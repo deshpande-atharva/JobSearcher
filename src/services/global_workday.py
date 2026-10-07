@@ -69,10 +69,11 @@ async def load_workday_archive_sample(
     # Only query myworkdayjobs.com. myworkdaysite.com CDX returns student portals
     # (e.g. wd1-student.myworkdaysite.com) that have no wdN-based career-board path
     # structure and produce zero valid boards from parse_public_workday_board.
-    queries: list[str] = []
+    # Build queries grouped by cluster for per-cluster observability.
+    cluster_queries: dict[str, list[str]] = {c: [] for c in chosen}
     for cluster in chosen:
         for prefix in prefixes:
-            queries.append(
+            cluster_queries[cluster].append(
                 workday_archive_query_url(
                     domain="myworkdayjobs.com",
                     cluster=cluster,
@@ -80,20 +81,39 @@ async def load_workday_archive_sample(
                     limit=limit,
                 )
             )
-    bodies = await asyncio.gather(*(_cdx_body(ctx, url) for url in queries))
+    all_queries = [q for qs in cluster_queries.values() for q in qs]
+    bodies = await asyncio.gather(*(_cdx_body(ctx, url) for url in all_queries))
+
+    # Parse results per cluster.
     found: list[str] = []
     seen = 0
-    for body in bodies:
-        urls, count = parse_cdx_workday(body)
-        seen += count
-        found.extend(urls)
+    body_idx = 0
+    cluster_stats: list[dict[str, object]] = []
+    for cluster in chosen:
+        c_urls: list[str] = []
+        c_seen = 0
+        for _q in cluster_queries[cluster]:
+            urls_batch, count = parse_cdx_workday(bodies[body_idx])
+            c_seen += count
+            c_urls.extend(urls_batch)
+            body_idx += 1
+        seen += c_seen
+        found.extend(c_urls)
+        c_unique = select_workday_boards(c_urls, limit=len(c_urls) or 0, now=now)
+        cluster_stats.append({
+            "cluster": cluster,
+            "queries": len(cluster_queries[cluster]),
+            "urls_seen": c_seen,
+            "boards_found": len(c_unique),
+        })
     unique = select_workday_boards(found, limit=len(found) or 0, now=now)
     log.info(
         "cdx_workday_sample_complete",
         service="internet_archive_cdx",
-        queries=len(queries),
+        queries=len(all_queries),
         urls_seen=seen,
         boards_found=len(unique),
+        per_cluster=cluster_stats,
     )
     detail = (
         f"Internet Archive CDX sample for Workday clusters {', '.join(chosen)} "
@@ -196,6 +216,7 @@ async def collect_global_workday(
     }
     fresh: list[str] = []
     seen: set[str] = set()
+    board_cluster: dict[str, str] = {}  # career_url → cluster for observability
     for url in urls:
         tally["discovered_boards"] += 1
         identity = workday_board_identity(url)
@@ -214,6 +235,13 @@ async def collect_global_workday(
             tally["invalid_boards"] += 1
             continue
         fresh.append(career)
+        # Extract cluster from the URL host for per-cluster stats.
+        parsed_board = parse_public_workday_board(url)
+        if parsed_board:
+            host = parsed_board[0]
+            cluster_match = re.search(r"\.(wd\d{1,3})\.", host)
+            if cluster_match:
+                board_cluster[career] = cluster_match.group(1)
     chosen = select_workday_boards(
         fresh,
         limit=limit,
@@ -311,6 +339,21 @@ async def collect_global_workday(
     tally["valid_boards"] = (
         int(tally["complete_boards"]) + int(tally["partial_boards"]) + int(tally["empty_boards"])
     )
+    # Per-cluster collection outcomes for observability.
+    cluster_outcomes: dict[str, dict[str, int]] = {}
+    for url_item, (batch, label, result, name, started, _elapsed) in zip(chosen, batches):
+        cluster = board_cluster.get(url_item, "unknown")
+        co = cluster_outcomes.setdefault(cluster, {
+            "selected": 0, "cxs_success": 0, "cxs_failure": 0, "raw_jobs": 0,
+        })
+        co["selected"] += 1
+        if label in ("complete", "partial", "empty"):
+            co["cxs_success"] += 1
+            co["raw_jobs"] += len(batch)
+        else:
+            co["cxs_failure"] += 1
+    if cluster_outcomes:
+        log.info("global_workday_cluster_outcomes", per_cluster=cluster_outcomes)
     return posts, tally
 
 

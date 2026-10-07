@@ -407,29 +407,49 @@ def build_llm_provider(config: AppConfig) -> LLMProvider:
         log.info("LLM provider disabled by configuration")
         return NullLLMProvider(settings)
 
-    if provider_name != "gemini":
-        log.warning(
-            "unknown LLM provider; continuing without an LLM",
-            provider=provider_name,
-            supported=["gemini", "none"],
-        )
-        return NullLLMProvider(settings)
+    if provider_name == "anthropic":
+        if not config.secrets.anthropic_api_key:
+            log.warning(
+                "ANTHROPIC_API_KEY is not set; continuing with deterministic logic only. "
+                "Ambiguous cases will be reported as UNKNOWN rather than guessed."
+            )
+            return NullLLMProvider(settings)
 
-    if not config.secrets.gemini_api_key:
-        log.warning(
-            "GEMINI_API_KEY is not set; continuing with deterministic logic only. "
-            "Ambiguous cases will be reported as UNKNOWN rather than guessed."
-        )
-        return NullLLMProvider(settings)
+        from src.llm.anthropic import AnthropicProvider
 
-    from src.llm.gemini import GeminiProvider
+        model = config.secrets.anthropic_model or settings.model
+        try:
+            return AnthropicProvider(
+                settings=settings.model_copy(update={"model": model}),
+                api_key=config.secrets.anthropic_api_key,
+            )
+        except Exception as exc:
+            log.warning("failed to initialise Anthropic provider; falling back to deterministic logic", error=str(exc))
+            return NullLLMProvider(settings)
 
-    model = config.secrets.gemini_model or settings.model
-    try:
-        return GeminiProvider(
-            settings=settings.model_copy(update={"model": model}),
-            api_key=config.secrets.gemini_api_key,
-        )
-    except Exception as exc:
-        log.warning("failed to initialise Gemini provider; falling back to deterministic logic", error=str(exc))
-        return NullLLMProvider(settings)
+    if provider_name == "gemini":
+        if not config.secrets.gemini_api_key:
+            log.warning(
+                "GEMINI_API_KEY is not set; continuing with deterministic logic only. "
+                "Ambiguous cases will be reported as UNKNOWN rather than guessed."
+            )
+            return NullLLMProvider(settings)
+
+        from src.llm.gemini import GeminiProvider
+
+        model = config.secrets.gemini_model or settings.model
+        try:
+            return GeminiProvider(
+                settings=settings.model_copy(update={"model": model}),
+                api_key=config.secrets.gemini_api_key,
+            )
+        except Exception as exc:
+            log.warning("failed to initialise Gemini provider; falling back to deterministic logic", error=str(exc))
+            return NullLLMProvider(settings)
+
+    log.warning(
+        "unknown LLM provider; continuing without an LLM",
+        provider=provider_name,
+        supported=["anthropic", "gemini", "none"],
+    )
+    return NullLLMProvider(settings)

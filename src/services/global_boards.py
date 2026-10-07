@@ -94,10 +94,22 @@ async def resolve_public_board_index(state: PipelineState, ctx: SourceContext) -
             load_workday_archive_sample,
         )
 
+        # Merge configured clusters (from companies.yaml) with the broader
+        # candidate pool (from settings.yaml). workday_clusters_for_run
+        # deduplicates and selects 2 per UTC date.
+        configured = configured_workday_clusters(state)
+        candidates = tuple(settings.workday_cluster_candidates) if settings.workday_cluster_candidates else ()
+        # Configured clusters first (preserve existing behaviour), then candidates
+        seen: list[str] = list(configured)
+        for c in candidates:
+            if c not in seen:
+                seen.append(c)
+        cluster_pool = tuple(seen) if seen else configured
+
         workday_task = asyncio.create_task(
             load_workday_archive_sample(
                 ctx,
-                clusters=configured_workday_clusters(state),
+                clusters=cluster_pool,
                 limit=settings.max_index_urls,
                 now=state.summary.run_started_at,
                 prefixes_per_run=settings.prefixes_per_run,

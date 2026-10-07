@@ -172,6 +172,10 @@ class GlobalBoardSettings(_Base):
     workday_snapshot_timeout_seconds: float = Field(default=15.0, gt=0, le=30)
     workday_snapshot_max_candidates: int = Field(default=40, ge=1, le=200)
     workday_snapshot_concurrency: int = Field(default=2, ge=1, le=4)
+    workday_cluster_candidates: list[str] = Field(
+        default_factory=lambda: ["wd1", "wd3", "wd5", "wd7", "wd12"],
+        description="Workday data-centre clusters to rotate through for global CDX sampling.",
+    )
 
 
 class DiscoverySettings(_Base):
@@ -293,8 +297,8 @@ class VisaSettings(_Base):
 
 
 class LLMSettings(_Base):
-    provider: Literal["gemini", "none"] = "gemini"
-    model: str = "gemini-2.5-flash"
+    provider: Literal["anthropic", "gemini", "none"] = "anthropic"
+    model: str = "claude-sonnet-5"
     temperature: float = Field(default=0.0, ge=0.0, le=2.0)
     max_output_tokens: int = Field(default=2048, ge=64)
     timeout_seconds: float = Field(default=60.0, gt=0)
@@ -669,6 +673,8 @@ class Secrets(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     llm_provider: str | None = None
+    anthropic_api_key: str | None = None
+    anthropic_model: str | None = None
     gemini_api_key: str | None = None
     gemini_model: str | None = None
     smtp_host: str | None = None
@@ -697,6 +703,8 @@ class Secrets(BaseModel):
 
         return cls(
             llm_provider=get("LLM_PROVIDER"),
+            anthropic_api_key=get("ANTHROPIC_API_KEY"),
+            anthropic_model=get("ANTHROPIC_MODEL"),
             gemini_api_key=get("GEMINI_API_KEY"),
             gemini_model=get("GEMINI_MODEL"),
             smtp_host=get("SMTP_HOST"),
@@ -778,6 +786,8 @@ class AppConfig(BaseModel):
         provider = (self.secrets.llm_provider or self.settings.llm.provider or "none").lower()
         if provider in ("none", "off", "disabled"):
             return False
+        if provider == "anthropic":
+            return bool(self.secrets.anthropic_api_key)
         if provider == "gemini":
             return bool(self.secrets.gemini_api_key)
         return False
@@ -822,7 +832,9 @@ def _apply_env_overrides(settings_data: dict[str, Any], env: dict[str, str]) -> 
     llm = dict(settings_data.get("llm") or {})
     if value := env.get("LLM_PROVIDER"):
         llm["provider"] = value.strip().lower()
-    if value := env.get("GEMINI_MODEL"):
+    if value := env.get("ANTHROPIC_MODEL"):
+        llm["model"] = value.strip()
+    elif value := env.get("GEMINI_MODEL"):
         llm["model"] = value.strip()
     if value := env.get("LLM_MAX_CALLS_PER_RUN"):
         try:

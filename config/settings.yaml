@@ -126,6 +126,15 @@ discovery:
     prefixes_per_run: 4
     index_timeout_seconds: 40
     board_timeout_seconds: 45
+    # Workday data-centre clusters to rotate through for global CDX sampling.
+    # Two are selected per run (UTC-date rotation). Adding more clusters
+    # increases coverage without increasing daily query volume.
+    workday_cluster_candidates:
+      - wd1
+      - wd3
+      - wd5
+      - wd7
+      - wd12
 
 filters:
   # Employment types kept in the output. See EmploymentType enum.
@@ -271,8 +280,8 @@ visa:
   explicit_language_confidence: 0.7
 
 llm:
-  provider: gemini
-  model: "gemini-3.6-flash"
+  provider: anthropic
+  model: "claude-sonnet-5"
   temperature: 0.0
   max_output_tokens: 2048
   timeout_seconds: 60

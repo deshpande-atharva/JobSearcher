@@ -10,7 +10,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
 authors = [{ name = "job-agent maintainers" }]
-keywords = ["jobs", "langgraph", "gemini", "multi-agent", "h1b", "ats"]
+keywords = ["jobs", "langgraph", "claude", "multi-agent", "h1b", "ats"]
 classifiers = [
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -27,6 +27,7 @@ dependencies = [
     "python-dotenv>=1.0",
     "tenacity>=8.3",
     "langgraph>=0.2.60",
+    "anthropic>=0.39,<1",
     "google-genai>=1.0,<3",
     "playwright>=1.44",
     "pypdf>=5,<7",
