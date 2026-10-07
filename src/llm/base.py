@@ -389,13 +389,23 @@ class LLMProvider(ABC):
 
     def _parse(self, raw: str, response_model: type[T]) -> T | None:
         if not raw or not raw.strip():
+            log.warning("llm returned empty response", provider=self.name)
             return None
         try:
             payload = json.loads(_extract_json_object(raw))
         except (json.JSONDecodeError, ValueError):
-            log.debug("llm returned non-JSON payload", provider=self.name)
+            log.warning(
+                "llm returned non-JSON payload",
+                provider=self.name,
+                raw_prefix=raw[:200] if raw else "",
+            )
             return None
         if not isinstance(payload, dict):
+            log.warning(
+                "llm returned non-object JSON",
+                provider=self.name,
+                payload_type=type(payload).__name__,
+            )
             return None
         payload = _normalize_literals(payload, response_model)
         try:
