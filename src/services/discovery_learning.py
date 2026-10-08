@@ -389,8 +389,123 @@ async def annotate_plan(plan: DiscoveryPlan, llm: Any) -> DiscoveryPlan:
     return plan
 
 
+def log_global_workday_attribution(state: Any) -> None:
+    """Emit structured attribution for qualified global Workday jobs.
+
+    Classifies each repeat as configured-company overlap, previous-global,
+    same-run duplicate, or other-historical.  Pure observability -- does not
+    change any job, dedup decision, or learning signal.
+    """
+    import re
+
+    jobs = list(state.jobs)
+    configured_keys: set[str] = set()
+    for company in state.config.target_companies():
+        configured_keys.add(normalize_company_name(company.name))
+
+    global_wday = [
+        job for job in jobs
+        if _is_global_workday(job)
+    ]
+    if not global_wday:
+        return
+
+    qualified = len(global_wday)
+    new = sum(1 for j in global_wday if getattr(j, "is_new", False))
+    repeat = qualified - new
+
+    # Attribute repeats.
+    configured_company_repeat = 0
+    previous_global_repeat = 0
+    other_historical_repeat = 0
+    for job in global_wday:
+        if getattr(job, "is_new", False):
+            continue
+        # If the job's company matches a configured company, it's configured overlap.
+        job_company = normalize_company_name(getattr(job, "company", "") or "")
+        if job_company in configured_keys:
+            configured_company_repeat += 1
+        else:
+            # Not a configured company -- it was found by a previous global run.
+            previous_global_repeat += 1
+
+    # Same-run duplicates are already rejected by dedup_agent and not in state.jobs,
+    # so the count is always 0 among qualified jobs.
+    same_run_duplicate = 0
+
+    # Cluster attribution.
+    cluster_data: dict[str, dict[str, int]] = {}
+    unique_companies: set[str] = set()
+    unique_new_companies: set[str] = set()
+    for job in global_wday:
+        cluster = _extract_cluster(job)
+        cd = cluster_data.setdefault(cluster, {
+            "boards": 0, "raw_jobs": 0, "qualified": 0,
+            "new": 0, "repeat": 0,
+        })
+        cd["qualified"] += 1
+        company = getattr(job, "company", "") or ""
+        unique_companies.add(company)
+        if getattr(job, "is_new", False):
+            cd["new"] += 1
+            unique_new_companies.add(company)
+        else:
+            cd["repeat"] += 1
+
+    log.info(
+        "global_workday_novelty_attribution",
+        qualified=qualified,
+        new=new,
+        repeat=repeat,
+        configured_company_repeat=configured_company_repeat,
+        previous_global_repeat=previous_global_repeat,
+        same_run_duplicate=same_run_duplicate,
+        other_historical_repeat=other_historical_repeat,
+        unique_companies_qualified=len(unique_companies),
+        unique_companies_new=len(unique_new_companies),
+        unique_jobs_new=new,
+    )
+    if cluster_data:
+        cluster_table = []
+        for cluster, cd in sorted(cluster_data.items()):
+            novelty = round(cd["new"] / cd["qualified"], 4) if cd["qualified"] else 0.0
+            cluster_table.append({
+                "cluster": cluster,
+                "qualified": cd["qualified"],
+                "new": cd["new"],
+                "repeat": cd["repeat"],
+                "novelty": novelty,
+            })
+        log.info("global_workday_cluster_value", per_cluster=cluster_table)
+
+
+def _is_global_workday(job: Any) -> bool:
+    """True when the job came from global Workday discovery."""
+    provenance = getattr(job, "provenance", None)
+    if not isinstance(provenance, dict):
+        return False
+    strategy = provenance.get("strategy_id", "")
+    return strategy == "workday_global_index"
+
+
+def _extract_cluster(job: Any) -> str:
+    """Extract the Workday cluster from a job's provenance."""
+    import re
+
+    provenance = getattr(job, "provenance", None)
+    if not isinstance(provenance, dict):
+        return "unknown"
+    identity = provenance.get("board_identity", "")
+    # board_identity format: host|tenant|site  where host = tenant.wdN.myworkdayjobs.com
+    match = re.search(r"\.(wd\d{1,3})\.", identity)
+    if match:
+        return match.group(1)
+    return "unknown"
+
+
 def persist_learning(state: Any) -> None:
     """Update memory after dedup. Fixture mode and dry-run do not write."""
+    log_global_workday_attribution(state)
     settings = state.config.settings.learning
     if not settings.enabled:
         return
