@@ -34,7 +34,7 @@ _ISO_CLEANUP_RE = re.compile(r"(?<=\d)([+-]\d{2})(\d{2})$")
 # "3 hours ago", "about 2 days ago", "45m ago", "posted 5 minutes ago"
 _RELATIVE_RE = re.compile(
     r"""
-    (?P<value>\d+(?:\.\d+)?)
+    (?P<value>\d+(?:\.\d+)?)\+?
     \s*
     (?P<unit>
         minutes?|mins?|m
@@ -134,16 +134,23 @@ def parse_relative_time(text: str, *, now: datetime | None = None) -> datetime |
 
 
 def _instant_or_yesterday(lowered: str, reference: datetime) -> datetime | None:
-    """Accept only phrases with a usable recency signal.
+    """Accept phrases with a usable recency signal.
 
-    ``today`` and ``posted today`` name a calendar day, not an elapsed time,
-    so they stay unknown. A numeric phrase such as ``2 hours ago`` is handled
-    before this function is called.
+    A numeric phrase such as ``2 hours ago`` is handled before this function
+    is called.
+
+    ``today`` / ``posted today`` in an ATS context (e.g. Workday CXS)
+    unambiguously means the posting appeared within the current calendar day.
+    We approximate this as 12 hours before the reference time (midpoint of the
+    day). This is conservative: the true age is 0-24h, and 12h keeps the job
+    inside the VERY_FRESH tier without overstating recency.
     """
     if "yesterday" in lowered:
         return reference - timedelta(hours=24)
     if any(token in lowered for token in ("just posted", "just now", "moments ago", "new posting")):
         return reference
+    if "today" in lowered:
+        return reference - timedelta(hours=12)
     return None
 
 

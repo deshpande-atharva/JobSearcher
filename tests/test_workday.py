@@ -129,7 +129,7 @@ async def test_workday_successful_request(tmp_config) -> None:
     assert result.http_status == 200
     assert result.discovered_count == 1
     assert result.jobs[0].title == "Software Engineer"
-    assert result.jobs[0].date_source is DateSource.UNKNOWN
+    assert result.jobs[0].date_source is DateSource.POSTED_DATE
     assert http.bodies[0]["limit"] == CXS_PAGE_SIZE
 
 

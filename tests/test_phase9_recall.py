@@ -219,9 +219,13 @@ async def test_playwright_render_cap_skips_another_browser(tmp_config) -> None:
     await http.aclose()
 
 
-def test_today_is_unknown_and_elapsed_phrases_stay_exact() -> None:
-    assert parse_datetime("Posted Today", now=NOW) is None
-    assert parse_datetime("today", now=NOW) is None
+def test_today_resolves_and_elapsed_phrases_stay_exact() -> None:
+    # "Posted Today" / "today" now resolve to ~12 hours before reference.
+    today_dt = parse_datetime("Posted Today", now=NOW)
+    assert today_dt is not None
+    assert 11.5 < (NOW - today_dt).total_seconds() / 3600 < 12.5
+    today_plain = parse_datetime("today", now=NOW)
+    assert today_plain is not None
     posted = parse_datetime("Posted 2 Hours Ago", now=NOW)
     assert posted is not None
     job = RawJobPosting(

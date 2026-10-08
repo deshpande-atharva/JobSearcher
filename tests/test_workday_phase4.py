@@ -225,7 +225,9 @@ def test_labeled_dates_and_discovery_time(tmp_config) -> None:
     assert explicit is not None and explicit.year == 2026
     updated = parse_labeled_job_date("Updated on September 26, 2026", now=now)
     assert updated is not None and updated.day == 26
-    assert parse_labeled_job_date("Posted 30+ Days Ago", now=now) is None
+    thirty_plus = parse_labeled_job_date("Posted 30+ Days Ago", now=now)
+    assert thirty_plus is not None
+    assert (now - thirty_plus).days >= 29
     detail = parse_workday_detail(
         "<p>Build services.</p>",
         posted_text="Updated on September 26, 2026",

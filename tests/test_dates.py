@@ -95,11 +95,10 @@ def test_missing_timestamp_is_not_fresh() -> None:
 
 
 def test_workday_open_ended_relative_date_is_not_fresh() -> None:
-    """'Posted 30+ Days Ago' is not an exact age and must not count as fresh."""
+    """'Posted 30+ Days Ago' parses to ~30 days and must not count as fresh."""
     parsed = parse_datetime("Posted 30+ Days Ago")
-    assert parsed is None
-    job = make_job(posted_at=None, updated_at=None)
-    job.date_source = job.date_source.__class__.UNKNOWN
+    assert parsed is not None
+    job = make_job(posted_at=parsed)
     assert is_fresh(job, 24)[0] is False
     assert is_fresh(job, 72)[0] is False
 
