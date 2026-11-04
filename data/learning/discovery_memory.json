@@ -310,8 +310,8 @@
       "unique_jobs": 1
     },
     "affirm": {
-      "consecutive_zero_new": 12,
-      "cooldown_remaining": 2,
+      "consecutive_zero_new": 13,
+      "cooldown_remaining": 1,
       "display": "Affirm",
       "effort": "monitor",
       "known_job_ids": [
@@ -324,7 +324,7 @@
         "8039471003"
       ],
       "last_new_job": "2026-10-22",
-      "last_seen": "2026-11-03",
+      "last_seen": "2026-11-04",
       "new_jobs": 6,
       "recent": [
         {
@@ -341,19 +341,19 @@
         }
       ],
       "recent_novelty_rate": 0.0,
-      "repeat_jobs": 127,
+      "repeat_jobs": 128,
       "revisit_due": false,
-      "runs_seen": 42,
+      "runs_seen": 43,
       "sources": [
         "greenhouse"
       ],
       "unique_jobs": 7
     },
     "airbnb": {
-      "consecutive_zero_new": 5,
-      "cooldown_remaining": 0,
+      "consecutive_zero_new": 6,
+      "cooldown_remaining": 2,
       "display": "Airbnb",
-      "effort": "full",
+      "effort": "monitor",
       "known_job_ids": [
         "8214444",
         "8257909",
@@ -361,7 +361,7 @@
         "8332157"
       ],
       "last_new_job": "2026-10-29",
-      "last_seen": "2026-11-03",
+      "last_seen": "2026-11-04",
       "new_jobs": 3,
       "recent": [
         {
@@ -378,9 +378,9 @@
         }
       ],
       "recent_novelty_rate": 0.0,
-      "repeat_jobs": 20,
-      "revisit_due": true,
-      "runs_seen": 23,
+      "repeat_jobs": 21,
+      "revisit_due": false,
+      "runs_seen": 24,
       "sources": [
         "greenhouse"
       ],
@@ -447,12 +447,13 @@
       "unique_jobs": 5
     },
     "booz allen hamilton": {
-      "consecutive_zero_new": 5,
+      "consecutive_zero_new": 0,
       "cooldown_remaining": 0,
       "display": "Booz Allen Hamilton",
       "effort": "full",
       "known_job_ids": [
         "r0240412",
+        "r0242700",
         "r0248029",
         "r0248038",
         "r0248046",
@@ -492,9 +493,9 @@
         "r0252342",
         "r0252345"
       ],
-      "last_new_job": "2026-10-29",
-      "last_seen": "2026-11-03",
-      "new_jobs": 35,
+      "last_new_job": "2026-11-04",
+      "last_seen": "2026-11-04",
+      "new_jobs": 36,
       "recent": [
         {
           "new": 0,
@@ -502,21 +503,21 @@
         },
         {
           "new": 0,
-          "qualified": 29
+          "qualified": 26
         },
         {
-          "new": 0,
+          "new": 1,
           "qualified": 26
         }
       ],
-      "recent_novelty_rate": 0.0,
-      "repeat_jobs": 264,
-      "revisit_due": true,
-      "runs_seen": 42,
+      "recent_novelty_rate": 0.0123,
+      "repeat_jobs": 289,
+      "revisit_due": false,
+      "runs_seen": 43,
       "sources": [
         "workday"
       ],
-      "unique_jobs": 39
+      "unique_jobs": 40
     },
     "box": {
       "consecutive_zero_new": 1,
@@ -549,8 +550,8 @@
       "unique_jobs": 1
     },
     "chime": {
-      "consecutive_zero_new": 3,
-      "cooldown_remaining": 2,
+      "consecutive_zero_new": 4,
+      "cooldown_remaining": 1,
       "display": "Chime",
       "effort": "monitor",
       "known_job_ids": [
@@ -559,7 +560,7 @@
         "8922481002"
       ],
       "last_new_job": "2026-10-31",
-      "last_seen": "2026-11-03",
+      "last_seen": "2026-11-04",
       "new_jobs": 3,
       "recent": [
         {
@@ -576,26 +577,27 @@
         }
       ],
       "recent_novelty_rate": 0.0,
-      "repeat_jobs": 27,
+      "repeat_jobs": 29,
       "revisit_due": false,
-      "runs_seen": 26,
+      "runs_seen": 27,
       "sources": [
         "greenhouse"
       ],
       "unique_jobs": 3
     },
     "figma": {
-      "consecutive_zero_new": 5,
+      "consecutive_zero_new": 0,
       "cooldown_remaining": 0,
       "display": "Figma",
       "effort": "full",
       "known_job_ids": [
         "6219995004",
-        "6238015004"
+        "6238015004",
+        "6241542004"
       ],
-      "last_new_job": "2026-10-29",
-      "last_seen": "2026-11-03",
-      "new_jobs": 2,
+      "last_new_job": "2026-11-04",
+      "last_seen": "2026-11-04",
+      "new_jobs": 3,
       "recent": [
         {
           "new": 0,
@@ -606,18 +608,18 @@
           "qualified": 1
         },
         {
-          "new": 0,
-          "qualified": 1
+          "new": 1,
+          "qualified": 2
         }
       ],
-      "recent_novelty_rate": 0.0,
-      "repeat_jobs": 18,
-      "revisit_due": true,
-      "runs_seen": 20,
+      "recent_novelty_rate": 0.25,
+      "repeat_jobs": 19,
+      "revisit_due": false,
+      "runs_seen": 21,
       "sources": [
         "greenhouse"
       ],
-      "unique_jobs": 2
+      "unique_jobs": 3
     },
     "figure": {
       "consecutive_zero_new": 13,
@@ -655,15 +657,15 @@
       "unique_jobs": 2
     },
     "flexport": {
-      "consecutive_zero_new": 6,
-      "cooldown_remaining": 2,
+      "consecutive_zero_new": 7,
+      "cooldown_remaining": 1,
       "display": "Flexport",
       "effort": "monitor",
       "known_job_ids": [
         "8326088"
       ],
       "last_new_job": "2026-10-28",
-      "last_seen": "2026-11-03",
+      "last_seen": "2026-11-04",
       "new_jobs": 1,
       "recent": [
         {
@@ -680,9 +682,9 @@
         }
       ],
       "recent_novelty_rate": 0.0,
-      "repeat_jobs": 6,
+      "repeat_jobs": 7,
       "revisit_due": false,
-      "runs_seen": 7,
+      "runs_seen": 8,
       "sources": [
         "greenhouse"
       ],
@@ -818,15 +820,15 @@
       "unique_jobs": 4
     },
     "mercury": {
-      "consecutive_zero_new": 11,
-      "cooldown_remaining": 0,
+      "consecutive_zero_new": 12,
+      "cooldown_remaining": 2,
       "display": "Mercury",
-      "effort": "full",
+      "effort": "monitor",
       "known_job_ids": [
         "6233238004"
       ],
       "last_new_job": "2026-10-23",
-      "last_seen": "2026-11-03",
+      "last_seen": "2026-11-04",
       "new_jobs": 1,
       "recent": [
         {
@@ -843,9 +845,9 @@
         }
       ],
       "recent_novelty_rate": 0.0,
-      "repeat_jobs": 11,
-      "revisit_due": true,
-      "runs_seen": 12,
+      "repeat_jobs": 12,
+      "revisit_due": false,
+      "runs_seen": 13,
       "sources": [
         "greenhouse"
       ],
@@ -924,7 +926,7 @@
       "unique_jobs": 4
     },
     "nvidia": {
-      "consecutive_zero_new": 1,
+      "consecutive_zero_new": 2,
       "cooldown_remaining": 0,
       "display": "NVIDIA",
       "effort": "full",
@@ -942,13 +944,9 @@
         "jr2028607"
       ],
       "last_new_job": "2026-11-02",
-      "last_seen": "2026-11-03",
+      "last_seen": "2026-11-04",
       "new_jobs": 11,
       "recent": [
-        {
-          "new": 0,
-          "qualified": 4
-        },
         {
           "new": 1,
           "qualified": 5
@@ -956,22 +954,26 @@
         {
           "new": 0,
           "qualified": 5
+        },
+        {
+          "new": 0,
+          "qualified": 4
         }
       ],
       "recent_novelty_rate": 0.0714,
-      "repeat_jobs": 76,
+      "repeat_jobs": 80,
       "revisit_due": false,
-      "runs_seen": 39,
+      "runs_seen": 40,
       "sources": [
         "workday"
       ],
       "unique_jobs": 11
     },
     "palantir": {
-      "consecutive_zero_new": 11,
-      "cooldown_remaining": 0,
+      "consecutive_zero_new": 12,
+      "cooldown_remaining": 2,
       "display": "Palantir",
-      "effort": "full",
+      "effort": "monitor",
       "known_job_ids": [
         "1b690123-1766-4e75-a0ef-0f58afa864b4",
         "66b495eb-aaf9-4bf9-a759-41854534add7",
@@ -980,7 +982,7 @@
         "da774f81-c98c-4dcf-9b9c-949fd7d90a13"
       ],
       "last_new_job": "2026-10-23",
-      "last_seen": "2026-11-03",
+      "last_seen": "2026-11-04",
       "new_jobs": 5,
       "recent": [
         {
@@ -989,7 +991,7 @@
         },
         {
           "new": 0,
-          "qualified": 4
+          "qualified": 2
         },
         {
           "new": 0,
@@ -997,9 +999,9 @@
         }
       ],
       "recent_novelty_rate": 0.0,
-      "repeat_jobs": 48,
-      "revisit_due": true,
-      "runs_seen": 16,
+      "repeat_jobs": 50,
+      "revisit_due": false,
+      "runs_seen": 17,
       "sources": [
         "lever"
       ],
@@ -1171,10 +1173,10 @@
       "unique_jobs": 1
     },
     "twitch": {
-      "consecutive_zero_new": 8,
-      "cooldown_remaining": 0,
+      "consecutive_zero_new": 9,
+      "cooldown_remaining": 2,
       "display": "Twitch",
-      "effort": "full",
+      "effort": "monitor",
       "known_job_ids": [
         "8879673002",
         "8886605002",
@@ -1184,7 +1186,7 @@
         "8917377002"
       ],
       "last_new_job": "2026-10-26",
-      "last_seen": "2026-11-03",
+      "last_seen": "2026-11-04",
       "new_jobs": 6,
       "recent": [
         {
@@ -1201,19 +1203,19 @@
         }
       ],
       "recent_novelty_rate": 0.0,
-      "repeat_jobs": 55,
-      "revisit_due": true,
-      "runs_seen": 26,
+      "repeat_jobs": 59,
+      "revisit_due": false,
+      "runs_seen": 27,
       "sources": [
         "greenhouse"
       ],
       "unique_jobs": 6
     },
     "visa": {
-      "consecutive_zero_new": 7,
-      "cooldown_remaining": 1,
+      "consecutive_zero_new": 8,
+      "cooldown_remaining": 0,
       "display": "Visa",
-      "effort": "monitor",
+      "effort": "full",
       "known_job_ids": [
         "ref089778w",
         "ref089779w",
@@ -1227,7 +1229,7 @@
         "ref089920w"
       ],
       "last_new_job": "2026-10-27",
-      "last_seen": "2026-11-03",
+      "last_seen": "2026-11-04",
       "new_jobs": 10,
       "recent": [
         {
@@ -1244,9 +1246,9 @@
         }
       ],
       "recent_novelty_rate": 0.0,
-      "repeat_jobs": 70,
-      "revisit_due": false,
-      "runs_seen": 8,
+      "repeat_jobs": 80,
+      "revisit_due": true,
+      "runs_seen": 9,
       "sources": [
         "workday"
       ],
@@ -1288,15 +1290,6 @@
     }
   },
   "runs": [
-    {
-      "new_jobs": 1,
-      "novelty_change": 0.0435,
-      "novelty_rate": 0.0435,
-      "previous_novelty_rate": 0.0,
-      "qualified": 23,
-      "repeat_jobs": 22,
-      "run_id": "2026-10-07T19:11:48Z"
-    },
     {
       "new_jobs": 0,
       "novelty_change": -0.0435,
@@ -1557,6 +1550,15 @@
       "qualified": 55,
       "repeat_jobs": 55,
       "run_id": "2026-11-03T18:48:14Z"
+    },
+    {
+      "new_jobs": 2,
+      "novelty_change": 0.037,
+      "novelty_rate": 0.037,
+      "previous_novelty_rate": 0.0,
+      "qualified": 54,
+      "repeat_jobs": 52,
+      "run_id": "2026-11-04T19:02:56Z"
     }
   ],
   "sources": {
@@ -1641,10 +1643,10 @@
         "twitch"
       ],
       "discovered": 0,
-      "last_success": "2026-11-03",
+      "last_success": "2026-11-04",
       "new_companies": 13,
-      "new_jobs": 39,
-      "qualified": 504,
+      "new_jobs": 40,
+      "qualified": 516,
       "recent": [
         {
           "new": 0,
@@ -1655,13 +1657,13 @@
           "qualified": 11
         },
         {
-          "new": 0,
-          "qualified": 11
+          "new": 1,
+          "qualified": 12
         }
       ],
-      "recent_novelty_rate": 0.0,
-      "repeat_jobs": 465,
-      "runs": 42,
+      "recent_novelty_rate": 0.0294,
+      "repeat_jobs": 476,
+      "runs": 43,
       "unique_companies": 19
     },
     "lever": {
@@ -1669,10 +1671,10 @@
         "palantir"
       ],
       "discovered": 0,
-      "last_success": "2026-11-03",
+      "last_success": "2026-11-04",
       "new_companies": 1,
       "new_jobs": 5,
-      "qualified": 53,
+      "qualified": 55,
       "recent": [
         {
           "new": 0,
@@ -1680,7 +1682,7 @@
         },
         {
           "new": 0,
-          "qualified": 4
+          "qualified": 2
         },
         {
           "new": 0,
@@ -1688,8 +1690,8 @@
         }
       ],
       "recent_novelty_rate": 0.0,
-      "repeat_jobs": 48,
-      "runs": 16,
+      "repeat_jobs": 50,
+      "runs": 17,
       "unique_companies": 1
     },
     "workday": {
@@ -1700,15 +1702,11 @@
         "zekelman"
       ],
       "discovered": 0,
-      "last_success": "2026-11-03",
+      "last_success": "2026-11-04",
       "new_companies": 3,
-      "new_jobs": 58,
-      "qualified": 469,
+      "new_jobs": 59,
+      "qualified": 509,
       "recent": [
-        {
-          "new": 0,
-          "qualified": 43
-        },
         {
           "new": 1,
           "qualified": 44
@@ -1716,11 +1714,15 @@
         {
           "new": 0,
           "qualified": 41
+        },
+        {
+          "new": 1,
+          "qualified": 40
         }
       ],
-      "recent_novelty_rate": 0.0078,
-      "repeat_jobs": 411,
-      "runs": 42,
+      "recent_novelty_rate": 0.016,
+      "repeat_jobs": 450,
+      "runs": 43,
       "unique_companies": 4
     }
   },
@@ -1826,10 +1828,10 @@
         "twitch"
       ],
       "discovered": 0,
-      "last_used": "2026-11-03",
+      "last_used": "2026-11-04",
       "new_companies": 10,
-      "new_jobs": 34,
-      "qualified": 491,
+      "new_jobs": 35,
+      "qualified": 503,
       "recent": [
         {
           "new": 0,
@@ -1840,13 +1842,13 @@
           "qualified": 11
         },
         {
-          "new": 0,
-          "qualified": 11
+          "new": 1,
+          "qualified": 12
         }
       ],
-      "recent_novelty_rate": 0.0,
-      "repeat_jobs": 457,
-      "runs": 42,
+      "recent_novelty_rate": 0.0294,
+      "repeat_jobs": 468,
+      "runs": 43,
       "source": "greenhouse"
     },
     "greenhouse_global_index": {
@@ -1886,10 +1888,10 @@
         "palantir"
       ],
       "discovered": 0,
-      "last_used": "2026-11-03",
+      "last_used": "2026-11-04",
       "new_companies": 1,
       "new_jobs": 5,
-      "qualified": 53,
+      "qualified": 55,
       "recent": [
         {
           "new": 0,
@@ -1897,7 +1899,7 @@
         },
         {
           "new": 0,
-          "qualified": 4
+          "qualified": 2
         },
         {
           "new": 0,
@@ -1905,8 +1907,8 @@
         }
       ],
       "recent_novelty_rate": 0.0,
-      "repeat_jobs": 48,
-      "runs": 16,
+      "repeat_jobs": 50,
+      "runs": 17,
       "source": "lever"
     },
     "workday_configured": {
@@ -1917,15 +1919,11 @@
         "visa"
       ],
       "discovered": 0,
-      "last_used": "2026-11-03",
+      "last_used": "2026-11-04",
       "new_companies": 2,
-      "new_jobs": 56,
-      "qualified": 466,
+      "new_jobs": 57,
+      "qualified": 506,
       "recent": [
-        {
-          "new": 0,
-          "qualified": 43
-        },
         {
           "new": 1,
           "qualified": 44
@@ -1933,11 +1931,15 @@
         {
           "new": 0,
           "qualified": 41
+        },
+        {
+          "new": 1,
+          "qualified": 40
         }
       ],
-      "recent_novelty_rate": 0.0078,
-      "repeat_jobs": 410,
-      "runs": 42,
+      "recent_novelty_rate": 0.016,
+      "repeat_jobs": 449,
+      "runs": 43,
       "source": "workday"
     },
     "workday_global_index": {
@@ -1970,6 +1972,6 @@
       "source": "workday"
     }
   },
-  "updated_at": "2026-11-03T18:54:10Z",
+  "updated_at": "2026-11-04T19:10:50Z",
   "version": 1
 }
